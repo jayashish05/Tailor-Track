@@ -85,7 +85,21 @@ router.get(
   }),
   (req, res) => {
     // Successful authentication
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard`);
+    // Store user info in session
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+      }
+      // Pass user data as URL parameter for client-side storage
+      const userData = encodeURIComponent(JSON.stringify({
+        id: req.user._id,
+        email: req.user.email,
+        name: req.user.name,
+        role: req.user.role,
+        avatar: req.user.avatar,
+      }));
+      res.redirect(`${process.env.FRONTEND_URL}/dashboard?user=${userData}`);
+    });
   }
 );
 

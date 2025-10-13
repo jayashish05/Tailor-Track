@@ -34,6 +34,24 @@ export default function DashboardPage() {
     // Check authentication with backend
     const checkAuth = async () => {
       try {
+        // Check if user data is in URL (from Google OAuth redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const userParam = urlParams.get('user');
+        
+        if (userParam) {
+          try {
+            const userData = JSON.parse(decodeURIComponent(userParam));
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
+            // Clean up URL
+            window.history.replaceState({}, document.title, '/dashboard');
+            setLoading(false);
+            return;
+          } catch (e) {
+            console.error('Failed to parse user data from URL:', e);
+          }
+        }
+
         // First check localStorage
         const localUser = localStorage.getItem('user');
         if (localUser) {
