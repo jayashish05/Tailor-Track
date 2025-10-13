@@ -117,8 +117,7 @@ const orderSchema = new mongoose.Schema(
 );
 
 // Indexes for performance
-orderSchema.index({ barcode: 1 });
-orderSchema.index({ orderNumber: 1 });
+// Note: barcode and orderNumber already have unique: true in schema, no need for separate index
 orderSchema.index({ customer: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
