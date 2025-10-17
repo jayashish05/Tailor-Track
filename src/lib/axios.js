@@ -8,24 +8,11 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add user info from localStorage if available
+// Request interceptor to ensure fresh auth
 api.interceptors.request.use(
   (config) => {
-    // Add user data to headers as backup (in case cookies don't work)
-    if (typeof window !== 'undefined') {
-      const user = localStorage.getItem('user');
-      if (user) {
-        try {
-          const userData = JSON.parse(user);
-          // Add user ID to headers for backend to verify
-          if (userData.id) {
-            config.headers['X-User-ID'] = userData.id;
-          }
-        } catch (e) {
-          console.error('Failed to parse user from localStorage:', e);
-        }
-      }
-    }
+    // Ensure credentials are always sent
+    config.withCredentials = true;
     return config;
   },
   (error) => {
@@ -37,11 +24,14 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Don't automatically redirect on 401
-    // Let each component decide how to handle authentication errors
-    // This prevents redirect loops when using localStorage as auth source
+    // Don't auto-redirect on 401, let the component handle it
+    // This allows for better user experience and error messages
     if (error.response?.status === 401) {
-      console.log('⚠️ 401 Unauthorized response from API');
+      console.warn('⚠️ Unauthorized request - session may have expired');
+      // Clear localStorage user data if session is invalid
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user');
+      }
     }
     return Promise.reject(error);
   }

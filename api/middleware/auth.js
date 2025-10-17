@@ -3,7 +3,20 @@ const isAuthenticated = (req, res, next) => {
   if (req.isAuthenticated()) {
     return next();
   }
-  return res.status(401).json({ error: 'Unauthorized. Please log in.' });
+  
+  // Log session details for debugging
+  console.error('❌ Authentication failed:', {
+    path: req.path,
+    method: req.method,
+    sessionID: req.sessionID,
+    hasSession: !!req.session,
+    hasCookie: !!req.headers.cookie,
+  });
+  
+  return res.status(401).json({ 
+    error: 'Unauthorized. Please log in.',
+    message: 'Your session has expired or you are not logged in. Please login again.',
+  });
 };
 
 // Role-based authorization

@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import axios from '@/lib/axios';
 import { 
   Users, 
   Package, 
@@ -32,8 +31,6 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState([]);
 
   useEffect(() => {
-    let mounted = true; // Prevent state updates if component unmounts
-    
     // Check authentication with backend
     const checkAuth = async () => {
       try {
@@ -44,15 +41,12 @@ export default function DashboardPage() {
         if (userParam) {
           try {
             const userData = JSON.parse(decodeURIComponent(userParam));
-            console.log('✅ User data received from OAuth redirect:', userData);
-            if (mounted) {
-              setUser(userData);
-              localStorage.setItem('user', JSON.stringify(userData));
-              setLoading(false);
-            }
+            setUser(userData);
+            localStorage.setItem('user', JSON.stringify(userData));
             // Clean up URL
             window.history.replaceState({}, document.title, '/dashboard');
-            return; // Exit early - we have the user data
+            setLoading(false);
+            return;
           } catch (e) {
             console.error('Failed to parse user data from URL:', e);
           }
@@ -61,22 +55,12 @@ export default function DashboardPage() {
         // First check localStorage
         const localUser = localStorage.getItem('user');
         if (localUser) {
-          try {
-            const userData = JSON.parse(localUser);
-            console.log('✅ User data loaded from localStorage:', userData);
-            if (mounted) {
-              setUser(userData);
-              setLoading(false);
-            }
-            return; // Exit early - we have the user data
-          } catch (e) {
-            console.error('Failed to parse localStorage user:', e);
-            localStorage.removeItem('user'); // Clear corrupted data
-          }
+          setUser(JSON.parse(localUser));
+          setLoading(false);
+          return;
         }
 
-        // Then check session (for Google OAuth) - only if no localStorage data
-        console.log('🔍 Checking backend session...');
+        // Then check session (for Google OAuth)
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
         const response = await fetch(`${backendUrl}/api/auth/status`, {
           credentials: 'include',
@@ -92,52 +76,24 @@ export default function DashboardPage() {
         const data = await response.json();
         
         if (data.authenticated && data.user) {
-          console.log('✅ User authenticated via backend session:', data.user);
-          if (mounted) {
-            setUser(data.user);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            setLoading(false);
-          }
+          setUser(data.user);
+          localStorage.setItem('user', JSON.stringify(data.user));
         } else {
-          console.log('❌ Not authenticated, redirecting to login');
-          if (mounted) {
-            router.push('/login');
-          }
+          router.push('/login');
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        // Only redirect if we truly have no user data
-        const localUser = localStorage.getItem('user');
-        if (!localUser) {
-          console.log('❌ No user data found, redirecting to login');
-          if (mounted) {
-            router.push('/login');
-          }
-        } else {
-          // Try to use the localStorage data as fallback
-          try {
-            const userData = JSON.parse(localUser);
-            console.log('⚠️ Using localStorage as fallback:', userData);
-            if (mounted) {
-              setUser(userData);
-              setLoading(false);
-            }
-          } catch (e) {
-            console.error('Failed to parse localStorage user:', e);
-            if (mounted) {
-              router.push('/login');
-            }
-          }
+        // If localStorage check didn't find user, redirect to login
+        if (!localStorage.getItem('user')) {
+          router.push('/login');
         }
+      } finally {
+        setLoading(false);
       }
     };
 
     checkAuth();
-    
-    return () => {
-      mounted = false; // Cleanup function
-    };
-  }, []); // Empty dependency array - only run once on mount
+  }, [router]);
 
   // Fetch orders and calculate stats
   useEffect(() => {
@@ -145,10 +101,25 @@ export default function DashboardPage() {
       if (!user) return;
       
       try {
-        const response = await axios.get('/orders');
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
+        const response = await fetch(`${backendUrl}/api/orders`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
         
-        if (response.data) {
-          const orders = response.data.orders || [];
+        if (response.status === 401) {
+          // Session expired - clear localStorage and redirect
+          console.warn('⚠️ Session expired, redirecting to login');
+          localStorage.removeItem('user');
+          router.push('/login?error=session_expired');
+          return;
+        }
+        
+        if (response.ok) {
+          const data = await response.json();
+          const orders = data.orders || [];
           
           // Calculate stats
           const total = orders.length;
@@ -172,7 +143,7 @@ export default function DashboardPage() {
     };
     
     fetchOrders();
-  }, [user]);
+  }, [user, router]);
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -188,12 +159,14 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('/auth/logout');
-      console.log('✅ Logout successful');
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
+      await fetch(`${backendUrl}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
     } catch (error) {
       console.error('Logout error:', error);
     }
-    // Clear localStorage and redirect
     localStorage.removeItem('user');
     router.push('/login');
   };

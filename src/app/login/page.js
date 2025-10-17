@@ -21,13 +21,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Check if redirected from registration
+    // Check if redirected from registration or other pages
     const params = new URLSearchParams(window.location.search);
     if (params.get('registered') === 'true') {
       setSuccess('Registration successful! Please login.');
     }
     if (params.get('error') === 'auth_failed') {
       setError('Google authentication failed. Please try again.');
+    }
+    if (params.get('error') === 'session_expired') {
+      setError('Your session has expired. Please login again.');
+    }
+    if (params.get('error') === 'unauthorized') {
+      setError('Please login to continue.');
     }
   }, []);
 
@@ -41,25 +47,20 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
     setLoading(true);
 
     try {
-      const response = await axios.post('/auth/login', formData);
+      const response = await axios.post('/api/auth/login', formData);
       
-      if (response.data && response.data.user) {
+      if (response.data.success) {
         // Store user data in localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
-        console.log('✅ Login successful, user stored:', response.data.user);
         
         // Redirect to dashboard
         router.push('/dashboard');
-      } else {
-        setError('Login failed. Please try again.');
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.response?.data?.error || err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

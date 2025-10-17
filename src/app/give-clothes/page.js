@@ -161,6 +161,17 @@ export default function GiveClothesPage() {
       }
     } catch (err) {
       console.error('Order creation error:', err);
+      
+      // Handle authentication errors
+      if (err.response?.status === 401) {
+        localStorage.removeItem('user');
+        setError('Your session has expired. Redirecting to login...');
+        setTimeout(() => {
+          router.push('/login?error=session_expired');
+        }, 2000);
+        return;
+      }
+      
       const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create order. Please try again.';
       setError(errorMsg);
     } finally {
