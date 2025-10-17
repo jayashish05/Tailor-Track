@@ -152,15 +152,32 @@ export default function GiveClothesPage() {
       console.log('Submitting order:', orderData);
       
       const response = await axios.post('/orders', orderData);
+      
+      console.log('Response received:', response);
+      console.log('Response status:', response.status);
+      console.log('Response data:', response.data);
 
       if (response.data) {
         setSuccess('Order created successfully! Redirecting...');
         setTimeout(() => {
           router.push('/dashboard');
         }, 2000);
+      } else {
+        console.error('No response data received');
+        setError('Order may have been created but response was unclear. Please check your orders.');
       }
     } catch (err) {
       console.error('Order creation error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error message:', err.message);
+      console.error('Error code:', err.code);
+      console.error('Error config:', err.config);
+      
+      // Handle network errors (no response from server)
+      if (!err.response) {
+        setError('Network error: Unable to connect to server. Please check if the backend is running.');
+        return;
+      }
       
       // Handle authentication errors
       if (err.response?.status === 401) {
@@ -172,7 +189,22 @@ export default function GiveClothesPage() {
         return;
       }
       
-      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create order. Please try again.';
+      // Build detailed error message
+      let errorMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to create order. Please try again.';
+      
+      // Add validation errors if present
+      if (err.response?.data?.validationErrors && Array.isArray(err.response.data.validationErrors)) {
+        const validationDetails = err.response.data.validationErrors
+          .map(ve => `${ve.field}: ${ve.message}`)
+          .join(', ');
+        errorMsg += ` - ${validationDetails}`;
+      }
+      
+      // Add details if present
+      if (err.response?.data?.details) {
+        errorMsg += ` - ${err.response.data.details}`;
+      }
+      
       setError(errorMsg);
     } finally {
       setSubmitting(false);

@@ -8,11 +8,7 @@ const {
   generateBarcodeImage,
   generateOrderNumber,
 } = require('../utils/barcode');
-const { 
-  notifyOrderReadyForPickup, 
-  notifyOrderStatusUpdate,
-  notifyOrderConfirmation 
-} = require('../utils/emailService');
+const { notifyOrderConfirmation, notifyOrderReadyForPickup, notifyOrderStatusUpdate } = require('../utils/emailService');
 const router = express.Router();
 
 // Get all orders
@@ -116,147 +112,122 @@ router.get('/track/:barcode', async (req, res) => {
 
 // Create order (Customer-friendly endpoint)
 router.post('/', isAuthenticated, async (req, res) => {
-  try {
-    let customerId;
-    
-    // If customer is placing order themselves
-    if (req.user.role === 'customer') {
-      // Validate required customer data
-      if (!req.body.customerPhone) {
-        return res.status(400).json({ 
-          error: 'Phone number is required',
-          details: 'Please provide your phone number to create an order'
-        });
-      }
-
-      // Find or create customer record
-      let customer = await Customer.findOne({ userId: req.user._id });
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  
+  while (attempt < MAX_RETRIES) {
+    try {
+      let customerId;
       
-      if (!customer) {
-        // Create customer record from user data
-        customer = await Customer.create({
-          userId: req.user._id,
-          name: req.body.customerName || req.user.name,
-          phone: req.body.customerPhone,
-          email: req.user.email,
-        });
-      } else {
-        // Update customer info if provided
-        if (req.body.customerName) customer.name = req.body.customerName;
-        if (req.body.customerPhone) customer.phone = req.body.customerPhone;
-        await customer.save();
-      }
-      
-      customerId = customer._id;
-    } else {
-      // Staff/Admin creating order for a customer
-      if (req.body.customer) {
-        // If customer ID is provided, use it
-        customerId = req.body.customer;
-      } else if (req.body.customerPhone) {
-        // If customer details are provided, find or create customer
-        let customer = await Customer.findOne({ phone: req.body.customerPhone });
+      // If customer is placing order themselves
+      if (req.user.role === 'customer') {
+        // Find or create customer record
+        let customer = await Customer.findOne({ userId: req.user._id });
         
         if (!customer) {
-          // Create new customer record
+          // Create customer record from user data
           customer = await Customer.create({
-            name: req.body.customerName || 'Walk-in Customer',
+            userId: req.user._id,
+            name: req.body.customerName || req.user.name,
             phone: req.body.customerPhone,
-            email: req.body.customerEmail || null,
+            email: req.user.email,
           });
         } else {
           // Update customer info if provided
           if (req.body.customerName) customer.name = req.body.customerName;
-          if (req.body.customerEmail) customer.email = req.body.customerEmail;
+          if (req.body.customerPhone) customer.phone = req.body.customerPhone;
           await customer.save();
         }
         
         customerId = customer._id;
       } else {
-        return res.status(400).json({ 
-          error: 'Customer information required',
-          details: 'Please provide either customer ID or customer phone number'
-        });
+        // Staff/Admin creating order for a customer
+        customerId = req.body.customer;
       }
-    }
 
-    // Process items (customers send simplified format)
-    const processedItems = req.body.items.map(item => ({
-      itemType: item.type || item.itemType,
-      description: item.measurements || item.description || `${item.type} order`,
-      quantity: item.quantity || 1,
-      measurements: typeof item.measurements === 'object' ? item.measurements : { notes: item.measurements },
-      price: item.price || 0, // Staff can set price later
-    }));
+      // Process items (customers send simplified format)
+      const processedItems = req.body.items.map(item => ({
+        itemType: item.type || item.itemType,
+        description: item.measurements || item.description || `${item.type} order`,
+        quantity: item.quantity || 1,
+        measurements: typeof item.measurements === 'object' ? item.measurements : { notes: item.measurements },
+        price: item.price || 0, // Staff can set price later
+      }));
 
-    // Calculate total amount
-    const totalAmount = processedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      // Calculate total amount
+      const totalAmount = processedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Generate barcode and order number
-    const barcode = generateBarcodeString();
-    const orderNumber = await generateOrderNumber();
+      // Generate barcode and order number
+      const barcode = generateBarcodeString();
+      const orderNumber = await generateOrderNumber();
 
-    // Create order
-    const order = await Order.create({
-      customer: customerId,
-      items: processedItems,
-      orderNumber,
-      barcode,
-      totalAmount,
-      dueDate: req.body.deliveryDate || req.body.dueDate,
-      deliveryDate: req.body.deliveryDate,
-      notes: req.body.instructions || req.body.notes,
-      createdBy: req.user._id,
-      status: 'received',
-      statusHistory: [
-        {
-          status: 'received',
-          updatedBy: req.user._id,
-          timestamp: new Date(),
-          notes: 'Order placed by customer',
-        },
-      ],
-    });
+      // Create order
+      const order = await Order.create({
+        customer: customerId,
+        items: processedItems,
+        orderNumber,
+        barcode,
+        totalAmount,
+        dueDate: req.body.deliveryDate || req.body.dueDate,
+        deliveryDate: req.body.deliveryDate,
+        notes: req.body.instructions || req.body.notes,
+        createdBy: req.user._id,
+        status: 'received',
+        statusHistory: [
+          {
+            status: 'received',
+            updatedBy: req.user._id,
+            timestamp: new Date(),
+            notes: 'Order placed by customer',
+          },
+        ],
+      });
 
-    // Update customer stats
-    await Customer.findByIdAndUpdate(customerId, {
-      $inc: { totalOrders: 1, totalSpent: totalAmount },
-    });
+      // Update customer stats
+      await Customer.findByIdAndUpdate(customerId, {
+        $inc: { totalOrders: 1, totalSpent: totalAmount },
+      });
 
-    const populatedOrder = await Order.findById(order._id)
-      .populate('customer', 'name phone email')
-      .populate('createdBy', 'name email');
+      const populatedOrder = await Order.findById(order._id)
+        .populate('customer', 'name phone email')
+        .populate('createdBy', 'name email');
 
-    // Send order confirmation email
-    if (populatedOrder.customer && populatedOrder.customer.email) {
+      // Send order confirmation email
       try {
         await notifyOrderConfirmation(populatedOrder, populatedOrder.customer);
-        console.log('✅ Order confirmation email sent for order:', order.orderNumber);
+        console.log('✅ Order confirmation email sent successfully');
       } catch (emailError) {
         console.error('⚠️ Failed to send order confirmation email:', emailError.message);
-        // Don't fail the request if email fails
+        // Don't fail the order creation if email fails
       }
-    } else {
-      console.warn('⚠️ No customer email found. Skipping confirmation email for order:', order.orderNumber);
-    }
 
-    res.status(201).json({
-      order: populatedOrder,
-      message: 'Order created successfully',
-    });
-  } catch (error) {
-    console.error('Create order error:', error);
-    console.error('Error stack:', error.stack);
-    console.error('Request body:', req.body);
-    res.status(500).json({ 
-      error: 'Failed to create order', 
-      details: error.message,
-      validationErrors: error.errors ? Object.keys(error.errors).map(key => ({
-        field: key,
-        message: error.errors[key].message
-      })) : undefined
-    });
+      return res.status(201).json({
+        order: populatedOrder,
+        message: 'Order created successfully',
+      });
+    } catch (error) {
+      // Check if it's a duplicate key error
+      if (error.code === 11000 && attempt < MAX_RETRIES - 1) {
+        console.log(`Duplicate key error on attempt ${attempt + 1}, retrying...`);
+        attempt++;
+        // Small delay before retry to avoid immediate collision
+        await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+        continue;
+      }
+      
+      console.error('Create order error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to create order', 
+        details: error.message 
+      });
+    }
   }
+  
+  // If we exhausted all retries
+  return res.status(500).json({ 
+    error: 'Failed to create order after multiple attempts',
+    details: 'Please try again'
+  });
 });
 
 // Update order status
@@ -294,24 +265,24 @@ router.patch('/:id/status', isStaffOrAdmin, async (req, res) => {
       .populate('customer')
       .populate('statusHistory.updatedBy', 'name email');
 
-    // Send email notification for order status updates
-    if (populatedOrder.customer && populatedOrder.customer.email) {
+    // Send email notification for all status changes
+    if (populatedOrder.customer) {
       try {
-        // Send specific email for "ready" status (ready to pickup)
+        // Send specific email for "ready" status
         if (value.status === 'ready') {
           await notifyOrderReadyForPickup(populatedOrder, populatedOrder.customer);
           console.log('✅ Order ready email sent for order:', order.orderNumber);
         } else {
-          // Send general status update email for all other statuses
+          // Send general status update email for other statuses
           await notifyOrderStatusUpdate(populatedOrder, populatedOrder.customer, value.status);
-          console.log(`✅ Status update email sent for order: ${order.orderNumber} - Status: ${value.status}`);
+          console.log(`✅ Status update email sent for order ${order.orderNumber}: ${value.status}`);
         }
       } catch (emailError) {
         console.error('⚠️ Failed to send email notification:', emailError.message);
         // Don't fail the request if email fails
       }
     } else {
-      console.warn('⚠️ No customer email found. Skipping email notification for order:', order.orderNumber);
+      console.warn('⚠️ No customer found for order:', order.orderNumber);
     }
 
     res.json({

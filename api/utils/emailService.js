@@ -31,6 +31,224 @@ const createTransporter = () => {
 
 // Email templates
 const emailTemplates = {
+  orderConfirmation: (order, customer) => ({
+    subject: `✅ Order Confirmation #${order.orderNumber}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 28px;
+          }
+          .content {
+            background: #f9fafb;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+          }
+          .order-details {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #10B981;
+          }
+          .order-details h2 {
+            margin-top: 0;
+            color: #10B981;
+            font-size: 20px;
+          }
+          .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .detail-row:last-child {
+            border-bottom: none;
+          }
+          .detail-label {
+            font-weight: 600;
+            color: #6b7280;
+          }
+          .detail-value {
+            color: #111827;
+          }
+          .items-list {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+          }
+          .item {
+            padding: 8px 0;
+            border-bottom: 1px dashed #e5e7eb;
+          }
+          .item:last-child {
+            border-bottom: none;
+          }
+          .success-badge {
+            background: #D1FAE5;
+            color: #065F46;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: 600;
+          }
+          .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 14px;
+            border-top: 1px solid #e5e7eb;
+            margin-top: 20px;
+          }
+          .contact-info {
+            background: #EEF2FF;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>🎉 Order Confirmed!</h1>
+          <p style="margin: 10px 0 0 0; font-size: 18px;">Thank you for your order</p>
+        </div>
+        
+        <div class="content">
+          <p>Dear <strong>${customer.name}</strong>,</p>
+          
+          <p>Thank you for choosing TailorTrack! We've received your order and our team is getting started on it right away.</p>
+          
+          <div class="success-badge">
+            ✓ Your order has been successfully placed
+          </div>
+          
+          <div class="order-details">
+            <h2>📦 Order Details</h2>
+            <div class="detail-row">
+              <span class="detail-label">Order Number:</span>
+              <span class="detail-value"><strong>${order.orderNumber}</strong></span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Barcode:</span>
+              <span class="detail-value">${order.barcode}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Status:</span>
+              <span class="detail-value" style="color: #10B981; font-weight: 600;">✓ Received</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Order Date:</span>
+              <span class="detail-value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+            ${order.deliveryDate ? `
+            <div class="detail-row">
+              <span class="detail-label">Expected Delivery:</span>
+              <span class="detail-value">${new Date(order.deliveryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+            ` : ''}
+            <div class="detail-row">
+              <span class="detail-label">Total Items:</span>
+              <span class="detail-value">${order.items.length} item(s)</span>
+            </div>
+          </div>
+
+          ${order.items && order.items.length > 0 ? `
+          <div class="items-list">
+            <h3 style="margin-top: 0; color: #374151;">Items in Your Order:</h3>
+            ${order.items.map(item => `
+              <div class="item">
+                <strong style="text-transform: capitalize;">${item.itemType}</strong> ${item.quantity > 1 ? `(Qty: ${item.quantity})` : ''}
+                ${item.description ? `<br><span style="color: #6b7280; font-size: 14px;">${item.description}</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
+
+          ${order.notes ? `
+          <div style="background: #FEF3C7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <strong>📝 Special Instructions:</strong><br>
+            ${order.notes}
+          </div>
+          ` : ''}
+
+          <div class="contact-info">
+            <p style="margin: 5px 0;"><strong>📞 Need Help?</strong></p>
+            <p style="margin: 5px 0;">Contact us at ${process.env.EMAIL_FROM || 'support@tailortrack.com'}</p>
+            <p style="margin: 5px 0;">We're here to help!</p>
+          </div>
+
+          <p style="margin-top: 30px;">We'll keep you updated on your order status. You can also track your order anytime using the order number or barcode above.</p>
+          <p style="margin: 5px 0;">Thank you for your business!</p>
+          <p style="margin: 5px 0;">Best regards,<br><strong>TailorTrack Team</strong></p>
+        </div>
+
+        <div class="footer">
+          <p>This is an automated confirmation from TailorTrack</p>
+          <p style="font-size: 12px; color: #9ca3af;">
+            If you have any questions, please contact us at ${process.env.EMAIL_FROM || 'support@tailortrack.com'}
+          </p>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+Dear ${customer.name},
+
+Thank you for choosing TailorTrack! We've received your order and our team is getting started on it right away.
+
+Order Details:
+- Order Number: ${order.orderNumber}
+- Barcode: ${order.barcode}
+- Status: Received
+- Order Date: ${new Date().toLocaleDateString()}
+${order.deliveryDate ? `- Expected Delivery: ${new Date(order.deliveryDate).toLocaleDateString()}` : ''}
+- Total Items: ${order.items.length}
+
+${order.items && order.items.length > 0 ? `
+Items:
+${order.items.map(item => `- ${item.itemType} ${item.quantity > 1 ? `(Qty: ${item.quantity})` : ''}`).join('\n')}
+` : ''}
+
+${order.notes ? `
+Special Instructions:
+${order.notes}
+` : ''}
+
+We'll keep you updated on your order status. You can also track your order anytime using the order number or barcode above.
+
+Thank you for your business!
+
+Best regards,
+TailorTrack Team
+
+---
+Need help? Contact us at ${process.env.EMAIL_FROM || 'support@tailortrack.com'}
+    `,
+  }),
+
   orderReadyForPickup: (order, customer) => ({
     subject: `🎉 Your Order #${order.orderNumber} is Ready for Pickup!`,
     html: `
@@ -107,7 +325,7 @@ const emailTemplates = {
           .cta-button {
             display: inline-block;
             background: #8B5CF6;
-            color: #FFFFFF !important;
+            color: white;
             padding: 15px 40px;
             text-decoration: none;
             border-radius: 8px;
@@ -117,7 +335,6 @@ const emailTemplates = {
           }
           .cta-button:hover {
             background: #7C3AED;
-            color: #FFFFFF !important;
           }
           .payment-notice {
             background: #FEF3C7;
@@ -256,309 +473,56 @@ TailorTrack Team
     `,
   }),
 
-  orderConfirmation: (order, customer) => ({
-    subject: `✅ Order Confirmed #${order.orderNumber} - TailorTrack`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body {
-            font-family: 'Arial', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-          }
-          .header {
-            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-            border-radius: 10px 10px 0 0;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 28px;
-          }
-          .content {
-            background: #f9fafb;
-            padding: 30px;
-            border: 1px solid #e5e7eb;
-            border-top: none;
-          }
-          .success-badge {
-            background: #D1FAE5;
-            color: #065F46;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            margin: 20px 0;
-            font-size: 18px;
-            font-weight: 600;
-          }
-          .order-details {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-            border-left: 4px solid #10B981;
-          }
-          .order-details h2 {
-            margin-top: 0;
-            color: #10B981;
-            font-size: 20px;
-          }
-          .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #e5e7eb;
-          }
-          .detail-row:last-child {
-            border-bottom: none;
-          }
-          .detail-label {
-            font-weight: 600;
-            color: #6b7280;
-          }
-          .detail-value {
-            color: #111827;
-          }
-          .items-list {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-          }
-          .item {
-            padding: 8px 0;
-            border-bottom: 1px dashed #e5e7eb;
-          }
-          .item:last-child {
-            border-bottom: none;
-          }
-          .barcode-section {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            margin: 20px 0;
-            border: 2px dashed #10B981;
-          }
-          .barcode-section h3 {
-            margin-top: 0;
-            color: #10B981;
-          }
-          .barcode-text {
-            font-size: 24px;
-            font-weight: 700;
-            color: #111827;
-            letter-spacing: 2px;
-            margin: 10px 0;
-          }
-          .info-box {
-            background: #EFF6FF;
-            border-left: 4px solid #3B82F6;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 20px 0;
-          }
-          .cta-button {
-            display: inline-block;
-            background: #10B981;
-            color: #FFFFFF !important;
-            padding: 15px 40px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            margin: 20px 0;
-          }
-          .cta-button:hover {
-            background: #059669;
-            color: #FFFFFF !important;
-          }
-          .footer {
-            text-align: center;
-            padding: 20px;
-            color: #6b7280;
-            font-size: 14px;
-            border-top: 1px solid #e5e7eb;
-            margin-top: 20px;
-          }
-          .contact-info {
-            background: #EEF2FF;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-            text-align: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>✅ Order Confirmed!</h1>
-          <p style="margin: 10px 0 0 0; font-size: 18px;">Thank you for your order</p>
-        </div>
-        
-        <div class="content">
-          <p>Dear <strong>${customer.name}</strong>,</p>
-          
-          <div class="success-badge">
-            🎉 Your order has been successfully placed!
-          </div>
-
-          <p>We've received your order and our team will start working on it soon. You'll receive updates via email as your order progresses.</p>
-          
-          <div class="order-details">
-            <h2>📦 Order Details</h2>
-            <div class="detail-row">
-              <span class="detail-label">Order Number:</span>
-              <span class="detail-value"><strong>${order.orderNumber}</strong></span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Order Date:</span>
-              <span class="detail-value">${new Date(order.createdAt).toLocaleDateString('en-IN', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-              })}</span>
-            </div>
-            ${order.dueDate ? `
-            <div class="detail-row">
-              <span class="detail-label">Expected Delivery:</span>
-              <span class="detail-value">${new Date(order.dueDate).toLocaleDateString('en-IN', { 
-                day: 'numeric', 
-                month: 'long', 
-                year: 'numeric' 
-              })}</span>
-            </div>
-            ` : ''}
-            <div class="detail-row">
-              <span class="detail-label">Status:</span>
-              <span class="detail-value" style="color: #10B981; font-weight: 600;">📝 Received</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Total Items:</span>
-              <span class="detail-value">${order.items.length} item(s)</span>
-            </div>
-          </div>
-
-          ${order.items && order.items.length > 0 ? `
-          <div class="items-list">
-            <h3 style="margin-top: 0; color: #374151;">Items in Your Order:</h3>
-            ${order.items.map(item => `
-              <div class="item">
-                <strong>${item.itemType.charAt(0).toUpperCase() + item.itemType.slice(1)}</strong> ${item.quantity > 1 ? `(Qty: ${item.quantity})` : ''}
-                ${item.description && item.description !== `${item.itemType} order` ? `<br><span style="color: #6b7280; font-size: 14px;">${item.description}</span>` : ''}
-              </div>
-            `).join('')}
-          </div>
-          ` : ''}
-
-          <div class="barcode-section">
-            <h3>🔍 Track Your Order</h3>
-            <p style="margin: 5px 0; color: #6b7280;">Use this barcode to track your order:</p>
-            <div class="barcode-text">${order.barcode}</div>
-            <p style="margin: 10px 0 0 0; font-size: 12px; color: #9ca3af;">Show this barcode when picking up your order</p>
-          </div>
-
-          <div class="info-box">
-            <strong>ℹ️ What's Next?</strong>
-            <ul style="margin: 10px 0; padding-left: 20px;">
-              <li>Our team will review your order details</li>
-              <li>You'll receive email notifications as your order progresses</li>
-              <li>We'll notify you when your order is ready for pickup</li>
-              ${order.totalAmount > 0 ? `<li>Payment can be made during pickup</li>` : ''}
-            </ul>
-          </div>
-
-          <div style="text-align: center;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3002'}/take-clothes" class="cta-button">
-              📱 Track Your Order
-            </a>
-          </div>
-
-          <div class="contact-info">
-            <p style="margin: 5px 0;"><strong>📍 Visit Us:</strong> [Your Shop Address]</p>
-            <p style="margin: 5px 0;"><strong>📞 Call Us:</strong> [Your Phone Number]</p>
-            <p style="margin: 5px 0;"><strong>🕒 Hours:</strong> Mon-Sat, 10 AM - 8 PM</p>
-          </div>
-
-          <p style="margin-top: 30px;">Thank you for choosing TailorTrack!</p>
-          <p style="margin: 5px 0;">Best regards,<br><strong>TailorTrack Team</strong></p>
-        </div>
-
-        <div class="footer">
-          <p>This is an automated confirmation from TailorTrack</p>
-          <p style="font-size: 12px; color: #9ca3af;">
-            Order #${order.orderNumber} | Barcode: ${order.barcode}
-          </p>
-          <p style="font-size: 12px; color: #9ca3af;">
-            If you have any questions, please contact us at ${process.env.EMAIL_FROM || 'support@tailortrack.com'}
-          </p>
-        </div>
-      </body>
-      </html>
-    `,
-    text: `
-Order Confirmation - TailorTrack
-
-Dear ${customer.name},
-
-✅ Your order has been successfully placed!
-
-Order Details:
-- Order Number: ${order.orderNumber}
-- Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN')}
-${order.dueDate ? `- Expected Delivery: ${new Date(order.dueDate).toLocaleDateString('en-IN')}` : ''}
-- Status: Received
-- Total Items: ${order.items.length}
-
-Barcode: ${order.barcode}
-(Show this barcode when picking up your order)
-
-${order.items && order.items.length > 0 ? `
-Items in Your Order:
-${order.items.map(item => `- ${item.itemType.charAt(0).toUpperCase() + item.itemType.slice(1)} ${item.quantity > 1 ? `(Qty: ${item.quantity})` : ''}`).join('\n')}
-` : ''}
-
-What's Next?
-- Our team will review your order details
-- You'll receive email notifications as your order progresses
-- We'll notify you when your order is ready for pickup
-${order.totalAmount > 0 ? '- Payment can be made during pickup' : ''}
-
-Track your order: ${process.env.FRONTEND_URL || 'http://localhost:3002'}/take-clothes
-
-Thank you for choosing TailorTrack!
-
-Best regards,
-TailorTrack Team
-
----
-Order #${order.orderNumber} | Barcode: ${order.barcode}
-    `,
-  }),
-
   orderStatusUpdate: (order, customer, newStatus) => {
-    // Map status to friendly names and colors
-    const statusInfo = {
-      received: { label: 'Order Received', color: '#3B82F6', emoji: '📝' },
-      'in-progress': { label: 'In Progress', color: '#F59E0B', emoji: '⚙️' },
-      measuring: { label: 'Taking Measurements', color: '#0EA5E9', emoji: '📏' },
-      stitching: { label: 'Being Stitched', color: '#F59E0B', emoji: '🧵' },
-      qc: { label: 'Quality Check', color: '#14B8A6', emoji: '✨' },
-      ready: { label: 'Ready to Pickup', color: '#10B981', emoji: '✅' },
-      delivered: { label: 'Delivered', color: '#8B5CF6', emoji: '🎉' },
-      cancelled: { label: 'Cancelled', color: '#EF4444', emoji: '❌' },
+    // Status-specific messages and colors
+    const statusConfig = {
+      received: {
+        emoji: '📥',
+        message: 'We have received your order and will start working on it soon.',
+        color: '#10B981',
+        bgColor: '#D1FAE5',
+      },
+      measuring: {
+        emoji: '📏',
+        message: 'Our team is taking precise measurements for your garments.',
+        color: '#F59E0B',
+        bgColor: '#FEF3C7',
+      },
+      stitching: {
+        emoji: '🧵',
+        message: 'Your garments are being carefully stitched by our expert tailors.',
+        color: '#3B82F6',
+        bgColor: '#DBEAFE',
+      },
+      qc: {
+        emoji: '✨',
+        message: 'Your order is undergoing quality control to ensure perfection.',
+        color: '#8B5CF6',
+        bgColor: '#EDE9FE',
+      },
+      ready: {
+        emoji: '🎉',
+        message: 'Great news! Your order is complete and ready for pickup!',
+        color: '#10B981',
+        bgColor: '#D1FAE5',
+      },
+      delivered: {
+        emoji: '✅',
+        message: 'Your order has been successfully delivered. Thank you!',
+        color: '#059669',
+        bgColor: '#A7F3D0',
+      },
     };
 
-    const status = statusInfo[newStatus] || { label: newStatus, color: '#6B7280', emoji: '📦' };
+    const config = statusConfig[newStatus] || {
+      emoji: '📦',
+      message: 'Your order status has been updated.',
+      color: '#3B82F6',
+      bgColor: '#DBEAFE',
+    };
 
     return {
-      subject: `${status.emoji} Order #${order.orderNumber} - ${status.label}`,
+      subject: `${config.emoji} Order #${order.orderNumber} - Status Update: ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`,
       html: `
       <!DOCTYPE html>
       <html>
@@ -573,7 +537,7 @@ Order #${order.orderNumber} | Barcode: ${order.barcode}
             padding: 20px;
           }
           .header {
-            background: linear-gradient(135deg, ${status.color} 0%, ${status.color}dd 100%);
+            background: linear-gradient(135deg, ${config.color} 0%, ${config.color}dd 100%);
             color: white;
             padding: 30px;
             text-align: center;
@@ -588,19 +552,38 @@ Order #${order.orderNumber} | Barcode: ${order.barcode}
             padding: 30px;
             border: 1px solid #e5e7eb;
             border-top: none;
-            border-radius: 0 0 10px 10px;
+          }
+          .status-badge {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-weight: 700;
+            margin: 20px 0;
+            font-size: 18px;
+            background: ${config.bgColor};
+            color: ${config.color};
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          }
+          .status-message {
+            background: ${config.bgColor};
+            border-left: 4px solid ${config.color};
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 16px;
           }
           .order-details {
             background: white;
             padding: 20px;
             border-radius: 8px;
             margin: 20px 0;
-            border-left: 4px solid ${status.color};
+            border-left: 4px solid ${config.color};
           }
           .order-details h2 {
             margin-top: 0;
-            color: ${status.color};
-            font-size: 20px;
+            color: ${config.color};
+            font-size: 18px;
           }
           .detail-row {
             display: flex;
@@ -618,43 +601,16 @@ Order #${order.orderNumber} | Barcode: ${order.barcode}
           .detail-value {
             color: #111827;
           }
-          .status-badge {
-            display: inline-block;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-weight: 700;
-            font-size: 18px;
-            margin: 20px 0;
-            background: ${status.color}22;
-            color: ${status.color};
-            border: 2px solid ${status.color};
-          }
-          .items-list {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-          }
-          .item {
-            padding: 8px 0;
-            border-bottom: 1px dashed #e5e7eb;
-          }
-          .item:last-child {
-            border-bottom: none;
-          }
           .cta-button {
             display: inline-block;
-            background: ${status.color};
-            color: #FFFFFF !important;
+            background: ${config.color};
+            color: white;
             padding: 15px 40px;
             text-decoration: none;
             border-radius: 8px;
             font-weight: 600;
             margin: 20px 0;
-          }
-          .cta-button:hover {
-            opacity: 0.9;
-            color: #FFFFFF !important;
+            text-align: center;
           }
           .footer {
             text-align: center;
@@ -664,133 +620,90 @@ Order #${order.orderNumber} | Barcode: ${order.barcode}
             border-top: 1px solid #e5e7eb;
             margin-top: 20px;
           }
-          .timeline-info {
-            background: #F3F4F6;
-            padding: 15px;
+          .timeline {
+            background: white;
+            padding: 20px;
             border-radius: 8px;
-            margin: 15px 0;
-            font-size: 14px;
-            color: #4B5563;
+            margin: 20px 0;
+          }
+          .timeline-item {
+            padding: 10px 0;
+            border-left: 2px solid #e5e7eb;
+            padding-left: 20px;
+            position: relative;
+          }
+          .timeline-item.active {
+            border-left-color: ${config.color};
+          }
+          .timeline-item.active::before {
+            content: '●';
+            position: absolute;
+            left: -6px;
+            color: ${config.color};
+            font-size: 12px;
           }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>${status.emoji} Order Status Update</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px;">Your order has been updated</p>
+          <h1>${config.emoji} Order Status Update</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px;">Order #${order.orderNumber}</p>
         </div>
         
         <div class="content">
           <p>Dear <strong>${customer.name}</strong>,</p>
           
-          <p>We wanted to let you know that your order status has been updated:</p>
-          
           <div style="text-align: center;">
-            <div class="status-badge">
-              ${status.emoji} ${status.label}
-            </div>
+            <div class="status-badge">${config.emoji} ${newStatus}</div>
           </div>
 
+          <div class="status-message">
+            ${config.message}
+          </div>
+          
           <div class="order-details">
-            <h2>📦 Order Details</h2>
+            <h2>📦 Order Information</h2>
             <div class="detail-row">
               <span class="detail-label">Order Number:</span>
               <span class="detail-value"><strong>${order.orderNumber}</strong></span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">Barcode:</span>
-              <span class="detail-value">${order.barcode}</span>
-            </div>
-            <div class="detail-row">
               <span class="detail-label">Current Status:</span>
-              <span class="detail-value" style="color: ${status.color}; font-weight: 600;">${status.label}</span>
+              <span class="detail-value" style="color: ${config.color}; font-weight: 600;">${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}</span>
             </div>
             <div class="detail-row">
               <span class="detail-label">Total Items:</span>
               <span class="detail-value">${order.items.length} item(s)</span>
             </div>
-            ${order.totalAmount > 0 ? `
+            ${order.deliveryDate ? `
             <div class="detail-row">
-              <span class="detail-label">Total Amount:</span>
-              <span class="detail-value" style="font-size: 18px; font-weight: 700; color: #8B5CF6;">₹${order.totalAmount}</span>
+              <span class="detail-label">Expected Delivery:</span>
+              <span class="detail-value">${new Date(order.deliveryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
             </div>
             ` : ''}
           </div>
 
-          ${order.items && order.items.length > 0 ? `
-          <div class="items-list">
-            <h3 style="margin-top: 0; color: #374151;">Items in Your Order:</h3>
-            ${order.items.map(item => `
-              <div class="item">
-                <strong>${item.itemType}</strong> ${item.quantity > 1 ? `(Qty: ${item.quantity})` : ''}
-                ${item.description ? `<br><span style="color: #6b7280; font-size: 14px;">${item.description}</span>` : ''}
-              </div>
-            `).join('')}
+          <div class="timeline">
+            <h3 style="margin-top: 0; color: #374151;">Order Progress Timeline</h3>
+            <div class="timeline-item ${['received', 'measuring', 'stitching', 'qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? 'active' : ''}">
+              📥 <strong>Received</strong> - Order placed
+            </div>
+            <div class="timeline-item ${['measuring', 'stitching', 'qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? 'active' : ''}">
+              📏 <strong>Measuring</strong> - Taking measurements
+            </div>
+            <div class="timeline-item ${['stitching', 'qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? 'active' : ''}">
+              🧵 <strong>Stitching</strong> - Crafting your garments
+            </div>
+            <div class="timeline-item ${['qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? 'active' : ''}">
+              ✨ <strong>Quality Check</strong> - Ensuring perfection
+            </div>
+            <div class="timeline-item ${['ready', 'delivered'].indexOf(newStatus) >= 0 ? 'active' : ''}">
+              🎉 <strong>Ready</strong> - Ready for pickup
+            </div>
+            <div class="timeline-item ${['delivered'].indexOf(newStatus) >= 0 ? 'active' : ''}">
+              ✅ <strong>Delivered</strong> - Order complete
+            </div>
           </div>
-          ` : ''}
-
-          ${newStatus === 'ready' ? `
-          ${newStatus === 'ready' ? `
-          <div class="timeline-info">
-            <strong>🎉 Great news!</strong> Your order is ready for pickup. Please visit our shop at your convenience.
-            ${order.totalAmount > 0 && order.paymentStatus !== 'paid' ? `<br><br><strong>⚠️ Note:</strong> Payment of ₹${order.totalAmount} is required before pickup.` : ''}
-          </div>
-          ` : ''}
-
-          ${newStatus === 'in-progress' ? `
-          <div class="timeline-info">
-            <strong>⚙️ In Progress:</strong> Our team is working on your order. We'll notify you once it's ready for pickup.
-          </div>
-          ` : ''}
-
-          ${newStatus === 'measuring' ? `
-          <div class="timeline-info">
-            <strong>📏 Taking Measurements:</strong> We're carefully taking your measurements to ensure a perfect fit.
-          </div>
-          ` : ''}
-
-          ${newStatus === 'stitching' ? `
-          <div class="timeline-info">
-            <strong>🧵 Being Stitched:</strong> Your garment is being expertly stitched by our skilled tailors.
-          </div>
-          ` : ''}
-
-          ${newStatus === 'qc' ? `
-          <div class="timeline-info">
-            <strong>✨ Quality Check:</strong> Your order is undergoing quality inspection to ensure perfection.
-          </div>
-          ` : ''}
-
-          ${newStatus === 'delivered' ? `
-          <div class="timeline-info">
-            <strong>🎉 Thank you!</strong> Your order has been delivered. We hope you're happy with our service!
-          </div>
-          ` : ''}
-
-          ${newStatus === 'cancelled' ? `
-          <div class="timeline-info">
-            <strong>❌ Cancelled:</strong> Your order has been cancelled. If you have any questions, please contact us.
-          </div>
-          ` : ''}
-          ` : ''}
-
-          ${newStatus === 'in-progress' ? `
-          <div class="timeline-info">
-            <strong>⚙️ In Progress:</strong> Our team is working on your order. We'll notify you once it's ready for pickup.
-          </div>
-          ` : ''}
-
-          ${newStatus === 'delivered' ? `
-          <div class="timeline-info">
-            <strong>🎉 Thank you!</strong> Your order has been delivered. We hope you're happy with our service!
-          </div>
-          ` : ''}
-
-          ${newStatus === 'cancelled' ? `
-          <div class="timeline-info">
-            <strong>❌ Cancelled:</strong> Your order has been cancelled. If you have any questions, please contact us.
-          </div>
-          ` : ''}
 
           <div style="text-align: center;">
             <a href="${process.env.FRONTEND_URL || 'http://localhost:3002'}/take-clothes" class="cta-button">
@@ -798,14 +711,14 @@ Order #${order.orderNumber} | Barcode: ${order.barcode}
             </a>
           </div>
 
-          <p style="margin-top: 30px;">Thank you for choosing TailorTrack!</p>
+          <p style="margin-top: 30px;">If you have any questions about your order, please don't hesitate to contact us.</p>
           <p style="margin: 5px 0;">Best regards,<br><strong>TailorTrack Team</strong></p>
         </div>
 
         <div class="footer">
           <p>This is an automated notification from TailorTrack</p>
           <p style="font-size: 12px; color: #9ca3af;">
-            If you have any questions, please contact us at ${process.env.EMAIL_FROM || 'support@tailortrack.com'}
+            Contact us at ${process.env.EMAIL_FROM || 'support@tailortrack.com'}
           </p>
         </div>
       </body>
@@ -814,36 +727,33 @@ Order #${order.orderNumber} | Barcode: ${order.barcode}
       text: `
 Dear ${customer.name},
 
-Your order #${order.orderNumber} status has been updated!
+${config.emoji} Order Status Update
 
-Current Status: ${status.label}
+${config.message}
 
-Order Details:
+Order Information:
 - Order Number: ${order.orderNumber}
-- Barcode: ${order.barcode}
-- Status: ${status.label}
+- Current Status: ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}
 - Total Items: ${order.items.length}
-${order.totalAmount > 0 ? `- Total Amount: ₹${order.totalAmount}` : ''}
+${order.deliveryDate ? `- Expected Delivery: ${new Date(order.deliveryDate).toLocaleDateString()}` : ''}
 
-${order.items && order.items.length > 0 ? `
-Items:
-${order.items.map(item => `- ${item.itemType} ${item.quantity > 1 ? `(Qty: ${item.quantity})` : ''}`).join('\n')}
-` : ''}
-
-${newStatus === 'ready' ? `🎉 Great news! Your order is ready for pickup.${order.totalAmount > 0 && order.paymentStatus !== 'paid' ? `\n⚠️ Payment of ₹${order.totalAmount} is required before pickup.` : ''}` : ''}
-${newStatus === 'in-progress' ? `⚙️ Our team is working on your order. We'll notify you once it's ready.` : ''}
-${newStatus === 'measuring' ? `📏 We're carefully taking your measurements to ensure a perfect fit.` : ''}
-${newStatus === 'stitching' ? `🧵 Your garment is being expertly stitched by our skilled tailors.` : ''}
-${newStatus === 'qc' ? `✨ Your order is undergoing quality inspection to ensure perfection.` : ''}
-${newStatus === 'delivered' ? `🎉 Thank you! Your order has been delivered.` : ''}
-${newStatus === 'cancelled' ? `❌ Your order has been cancelled. Please contact us if you have questions.` : ''}
+Order Progress:
+${['received', 'measuring', 'stitching', 'qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? '✓' : '○'} Received
+${['measuring', 'stitching', 'qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? '✓' : '○'} Measuring
+${['stitching', 'qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? '✓' : '○'} Stitching
+${['qc', 'ready', 'delivered'].indexOf(newStatus) >= 0 ? '✓' : '○'} Quality Check
+${['ready', 'delivered'].indexOf(newStatus) >= 0 ? '✓' : '○'} Ready for Pickup
+${['delivered'].indexOf(newStatus) >= 0 ? '✓' : '○'} Delivered
 
 Track your order: ${process.env.FRONTEND_URL || 'http://localhost:3002'}/take-clothes
 
-Thank you for choosing TailorTrack!
+If you have any questions, please contact us.
 
 Best regards,
 TailorTrack Team
+
+---
+Contact: ${process.env.EMAIL_FROM || 'support@tailortrack.com'}
     `,
     };
   },
@@ -883,6 +793,16 @@ const sendEmail = async (to, template) => {
 };
 
 // Notification functions
+const notifyOrderConfirmation = async (order, customer) => {
+  if (!customer.email) {
+    console.warn('⚠️ Customer email not found. Skipping order confirmation.');
+    return { success: false, message: 'Customer email not found' };
+  }
+
+  const template = emailTemplates.orderConfirmation(order, customer);
+  return await sendEmail(customer.email, template);
+};
+
 const notifyOrderReadyForPickup = async (order, customer) => {
   if (!customer.email) {
     console.warn('⚠️ Customer email not found. Skipping notification.');
@@ -903,20 +823,10 @@ const notifyOrderStatusUpdate = async (order, customer, newStatus) => {
   return await sendEmail(customer.email, template);
 };
 
-const notifyOrderConfirmation = async (order, customer) => {
-  if (!customer.email) {
-    console.warn('⚠️ Customer email not found. Skipping order confirmation email.');
-    return { success: false, message: 'Customer email not found' };
-  }
-
-  const template = emailTemplates.orderConfirmation(order, customer);
-  return await sendEmail(customer.email, template);
-};
-
 module.exports = {
   sendEmail,
+  notifyOrderConfirmation,
   notifyOrderReadyForPickup,
   notifyOrderStatusUpdate,
-  notifyOrderConfirmation,
   emailTemplates,
 };

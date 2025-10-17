@@ -56,17 +56,32 @@ const generateQRCode = async (text) => {
 const generateOrderNumber = async () => {
   const Order = require('../models/Order');
   
-  const date = new Date();
-  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
   
-  // Get count of orders today
-  const startOfDay = new Date(date.setHours(0, 0, 0, 0));
-  const count = await Order.countDocuments({
-    createdAt: { $gte: startOfDay },
-  });
+  // Find the highest order number for today
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   
-  const sequence = String(count + 1).padStart(4, '0');
-  return `TT-${dateStr}-${sequence}`;
+  const lastOrder = await Order.findOne({
+    createdAt: { $gte: startOfDay, $lte: endOfDay },
+  })
+    .sort({ orderNumber: -1 })
+    .select('orderNumber')
+    .lean();
+  
+  let sequence = 1;
+  if (lastOrder && lastOrder.orderNumber) {
+    // Extract sequence from last order number (TT-20251017-0004 -> 0004)
+    const parts = lastOrder.orderNumber.split('-');
+    if (parts.length === 3) {
+      const lastSequence = parts[2];
+      sequence = parseInt(lastSequence, 10) + 1;
+    }
+  }
+  
+  const sequenceStr = String(sequence).padStart(4, '0');
+  return `TT-${dateStr}-${sequenceStr}`;
 };
 
 module.exports = {

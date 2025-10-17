@@ -46,7 +46,7 @@ const orderSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ['received', 'in-progress', 'measuring', 'stitching', 'qc', 'ready', 'delivered', 'cancelled'],
+      enum: ['received', 'measuring', 'stitching', 'qc', 'ready', 'delivered'],
       default: 'received',
     },
     statusHistory: [
@@ -65,7 +65,7 @@ const orderSchema = new mongoose.Schema(
     ],
     totalAmount: {
       type: Number,
-      required: true,
+      default: 0,
     },
     advanceAmount: {
       type: Number,
@@ -124,6 +124,18 @@ orderSchema.index({ createdAt: -1 });
 
 // Calculate balance amount before saving
 orderSchema.pre('save', function (next) {
+  // Calculate total amount from items if not explicitly set
+  if (this.items && this.items.length > 0) {
+    const calculatedTotal = this.items.reduce((sum, item) => {
+      return sum + ((item.price || 0) * (item.quantity || 1));
+    }, 0);
+    
+    // Only update if total wasn't manually set or is 0
+    if (!this.totalAmount || this.totalAmount === 0) {
+      this.totalAmount = calculatedTotal;
+    }
+  }
+  
   this.balanceAmount = this.totalAmount - this.advanceAmount;
   
   // Update payment status only if totalAmount is set
