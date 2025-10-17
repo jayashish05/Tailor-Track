@@ -32,6 +32,8 @@ export default function DashboardPage() {
   const [recentOrders, setRecentOrders] = useState([]);
 
   useEffect(() => {
+    let mounted = true; // Prevent state updates if component unmounts
+    
     // Check authentication with backend
     const checkAuth = async () => {
       try {
@@ -43,11 +45,13 @@ export default function DashboardPage() {
           try {
             const userData = JSON.parse(decodeURIComponent(userParam));
             console.log('✅ User data received from OAuth redirect:', userData);
-            setUser(userData);
-            localStorage.setItem('user', JSON.stringify(userData));
+            if (mounted) {
+              setUser(userData);
+              localStorage.setItem('user', JSON.stringify(userData));
+              setLoading(false);
+            }
             // Clean up URL
             window.history.replaceState({}, document.title, '/dashboard');
-            setLoading(false);
             return; // Exit early - we have the user data
           } catch (e) {
             console.error('Failed to parse user data from URL:', e);
@@ -60,8 +64,10 @@ export default function DashboardPage() {
           try {
             const userData = JSON.parse(localUser);
             console.log('✅ User data loaded from localStorage:', userData);
-            setUser(userData);
-            setLoading(false);
+            if (mounted) {
+              setUser(userData);
+              setLoading(false);
+            }
             return; // Exit early - we have the user data
           } catch (e) {
             console.error('Failed to parse localStorage user:', e);
@@ -69,7 +75,7 @@ export default function DashboardPage() {
           }
         }
 
-        // Then check session (for Google OAuth)
+        // Then check session (for Google OAuth) - only if no localStorage data
         console.log('🔍 Checking backend session...');
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
         const response = await fetch(`${backendUrl}/api/auth/status`, {
@@ -87,12 +93,16 @@ export default function DashboardPage() {
         
         if (data.authenticated && data.user) {
           console.log('✅ User authenticated via backend session:', data.user);
-          setUser(data.user);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          setLoading(false);
+          if (mounted) {
+            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            setLoading(false);
+          }
         } else {
           console.log('❌ Not authenticated, redirecting to login');
-          router.push('/login');
+          if (mounted) {
+            router.push('/login');
+          }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -100,25 +110,34 @@ export default function DashboardPage() {
         const localUser = localStorage.getItem('user');
         if (!localUser) {
           console.log('❌ No user data found, redirecting to login');
-          router.push('/login');
+          if (mounted) {
+            router.push('/login');
+          }
         } else {
           // Try to use the localStorage data as fallback
           try {
             const userData = JSON.parse(localUser);
             console.log('⚠️ Using localStorage as fallback:', userData);
-            setUser(userData);
+            if (mounted) {
+              setUser(userData);
+              setLoading(false);
+            }
           } catch (e) {
             console.error('Failed to parse localStorage user:', e);
-            router.push('/login');
+            if (mounted) {
+              router.push('/login');
+            }
           }
         }
-      } finally {
-        setLoading(false);
       }
     };
 
     checkAuth();
-  }, [router]);
+    
+    return () => {
+      mounted = false; // Cleanup function
+    };
+  }, []); // Empty dependency array - only run once on mount
 
   // Fetch orders and calculate stats
   useEffect(() => {

@@ -37,11 +37,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Don't automatically redirect on 401
+    // Let each component decide how to handle authentication errors
+    // This prevents redirect loops when using localStorage as auth source
     if (error.response?.status === 401) {
-      // Redirect to login if unauthorized
-      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      console.log('⚠️ 401 Unauthorized response from API');
     }
     return Promise.reject(error);
   }
