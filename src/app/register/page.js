@@ -47,19 +47,24 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/register', {
+      const response = await axios.post('/auth/register', {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        businessName: formData.businessName,
+        phone: formData.phone,
       });
 
-      if (response.data.success) {
-        // Redirect to login
-        router.push('/login?registered=true');
+      if (response.data && response.data.user) {
+        // Store user data and redirect to dashboard
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        console.log('✅ Registration successful, user stored:', response.data.user);
+        router.push('/dashboard');
+      } else {
+        setError('Registration failed. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error:', err);
+      setError(err.response?.data?.error || err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

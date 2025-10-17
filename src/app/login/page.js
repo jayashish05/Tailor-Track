@@ -41,20 +41,25 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/login', formData);
+      const response = await axios.post('/auth/login', formData);
       
-      if (response.data.success) {
+      if (response.data && response.data.user) {
         // Store user data in localStorage
         localStorage.setItem('user', JSON.stringify(response.data.user));
+        console.log('✅ Login successful, user stored:', response.data.user);
         
         // Redirect to dashboard
         router.push('/dashboard');
+      } else {
+        setError('Login failed. Please try again.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+      setError(err.response?.data?.error || err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }

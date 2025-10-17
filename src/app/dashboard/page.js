@@ -169,14 +169,12 @@ export default function DashboardPage() {
 
   const handleLogout = async () => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
-      await fetch(`${backendUrl}/api/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      await axios.post('/auth/logout');
+      console.log('✅ Logout successful');
     } catch (error) {
       console.error('Logout error:', error);
     }
+    // Clear localStorage and redirect
     localStorage.removeItem('user');
     router.push('/login');
   };
