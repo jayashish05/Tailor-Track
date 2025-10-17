@@ -8,7 +8,11 @@ const {
   generateBarcodeImage,
   generateOrderNumber,
 } = require('../utils/barcode');
-const { notifyOrderReadyForPickup } = require('../utils/emailService');
+const { 
+  notifyOrderReadyForPickup, 
+  notifyOrderStatusUpdate,
+  notifyOrderConfirmation 
+} = require('../utils/emailService');
 const router = express.Router();
 
 // Get all orders
@@ -117,6 +121,14 @@ router.post('/', isAuthenticated, async (req, res) => {
     
     // If customer is placing order themselves
     if (req.user.role === 'customer') {
+      // Validate required customer data
+      if (!req.body.customerPhone) {
+        return res.status(400).json({ 
+          error: 'Phone number is required',
+          details: 'Please provide your phone number to create an order'
+        });
+      }
+
       // Find or create customer record
       let customer = await Customer.findOne({ userId: req.user._id });
       
@@ -138,7 +150,34 @@ router.post('/', isAuthenticated, async (req, res) => {
       customerId = customer._id;
     } else {
       // Staff/Admin creating order for a customer
-      customerId = req.body.customer;
+      if (req.body.customer) {
+        // If customer ID is provided, use it
+        customerId = req.body.customer;
+      } else if (req.body.customerPhone) {
+        // If customer details are provided, find or create customer
+        let customer = await Customer.findOne({ phone: req.body.customerPhone });
+        
+        if (!customer) {
+          // Create new customer record
+          customer = await Customer.create({
+            name: req.body.customerName || 'Walk-in Customer',
+            phone: req.body.customerPhone,
+            email: req.body.customerEmail || null,
+          });
+        } else {
+          // Update customer info if provided
+          if (req.body.customerName) customer.name = req.body.customerName;
+          if (req.body.customerEmail) customer.email = req.body.customerEmail;
+          await customer.save();
+        }
+        
+        customerId = customer._id;
+      } else {
+        return res.status(400).json({ 
+          error: 'Customer information required',
+          details: 'Please provide either customer ID or customer phone number'
+        });
+      }
     }
 
     // Process items (customers send simplified format)
@@ -188,13 +227,35 @@ router.post('/', isAuthenticated, async (req, res) => {
       .populate('customer', 'name phone email')
       .populate('createdBy', 'name email');
 
+    // Send order confirmation email
+    if (populatedOrder.customer && populatedOrder.customer.email) {
+      try {
+        await notifyOrderConfirmation(populatedOrder, populatedOrder.customer);
+        console.log('✅ Order confirmation email sent for order:', order.orderNumber);
+      } catch (emailError) {
+        console.error('⚠️ Failed to send order confirmation email:', emailError.message);
+        // Don't fail the request if email fails
+      }
+    } else {
+      console.warn('⚠️ No customer email found. Skipping confirmation email for order:', order.orderNumber);
+    }
+
     res.status(201).json({
       order: populatedOrder,
       message: 'Order created successfully',
     });
   } catch (error) {
     console.error('Create order error:', error);
-    res.status(500).json({ error: 'Failed to create order', details: error.message });
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    res.status(500).json({ 
+      error: 'Failed to create order', 
+      details: error.message,
+      validationErrors: error.errors ? Object.keys(error.errors).map(key => ({
+        field: key,
+        message: error.errors[key].message
+      })) : undefined
+    });
   }
 });
 
@@ -233,15 +294,24 @@ router.patch('/:id/status', isStaffOrAdmin, async (req, res) => {
       .populate('customer')
       .populate('statusHistory.updatedBy', 'name email');
 
-    // Send email notification if status is "ready" (Ready to Pickup)
-    if (value.status === 'ready' && populatedOrder.customer) {
+    // Send email notification for order status updates
+    if (populatedOrder.customer && populatedOrder.customer.email) {
       try {
-        await notifyOrderReadyForPickup(populatedOrder, populatedOrder.customer);
-        console.log('✅ Email notification sent for order ready:', order.orderNumber);
+        // Send specific email for "ready" status (ready to pickup)
+        if (value.status === 'ready') {
+          await notifyOrderReadyForPickup(populatedOrder, populatedOrder.customer);
+          console.log('✅ Order ready email sent for order:', order.orderNumber);
+        } else {
+          // Send general status update email for all other statuses
+          await notifyOrderStatusUpdate(populatedOrder, populatedOrder.customer, value.status);
+          console.log(`✅ Status update email sent for order: ${order.orderNumber} - Status: ${value.status}`);
+        }
       } catch (emailError) {
         console.error('⚠️ Failed to send email notification:', emailError.message);
         // Don't fail the request if email fails
       }
+    } else {
+      console.warn('⚠️ No customer email found. Skipping email notification for order:', order.orderNumber);
     }
 
     res.json({

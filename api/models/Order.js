@@ -40,13 +40,13 @@ const orderSchema = new mongoose.Schema(
         },
         price: {
           type: Number,
-          required: true,
+          default: 0,
         },
       },
     ],
     status: {
       type: String,
-      enum: ['received', 'measuring', 'stitching', 'qc', 'ready', 'delivered'],
+      enum: ['received', 'in-progress', 'measuring', 'stitching', 'qc', 'ready', 'delivered', 'cancelled'],
       default: 'received',
     },
     statusHistory: [
