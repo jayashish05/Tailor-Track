@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import axios from '@/lib/axios';
 import { 
   Users, 
   Package, 
@@ -41,12 +42,13 @@ export default function DashboardPage() {
         if (userParam) {
           try {
             const userData = JSON.parse(decodeURIComponent(userParam));
+            console.log('✅ User data received from OAuth redirect:', userData);
             setUser(userData);
             localStorage.setItem('user', JSON.stringify(userData));
             // Clean up URL
             window.history.replaceState({}, document.title, '/dashboard');
             setLoading(false);
-            return;
+            return; // Exit early - we have the user data
           } catch (e) {
             console.error('Failed to parse user data from URL:', e);
           }
@@ -55,12 +57,20 @@ export default function DashboardPage() {
         // First check localStorage
         const localUser = localStorage.getItem('user');
         if (localUser) {
-          setUser(JSON.parse(localUser));
-          setLoading(false);
-          return;
+          try {
+            const userData = JSON.parse(localUser);
+            console.log('✅ User data loaded from localStorage:', userData);
+            setUser(userData);
+            setLoading(false);
+            return; // Exit early - we have the user data
+          } catch (e) {
+            console.error('Failed to parse localStorage user:', e);
+            localStorage.removeItem('user'); // Clear corrupted data
+          }
         }
 
         // Then check session (for Google OAuth)
+        console.log('🔍 Checking backend session...');
         const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
         const response = await fetch(`${backendUrl}/api/auth/status`, {
           credentials: 'include',
@@ -76,16 +86,31 @@ export default function DashboardPage() {
         const data = await response.json();
         
         if (data.authenticated && data.user) {
+          console.log('✅ User authenticated via backend session:', data.user);
           setUser(data.user);
           localStorage.setItem('user', JSON.stringify(data.user));
+          setLoading(false);
         } else {
+          console.log('❌ Not authenticated, redirecting to login');
           router.push('/login');
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        // If localStorage check didn't find user, redirect to login
-        if (!localStorage.getItem('user')) {
+        // Only redirect if we truly have no user data
+        const localUser = localStorage.getItem('user');
+        if (!localUser) {
+          console.log('❌ No user data found, redirecting to login');
           router.push('/login');
+        } else {
+          // Try to use the localStorage data as fallback
+          try {
+            const userData = JSON.parse(localUser);
+            console.log('⚠️ Using localStorage as fallback:', userData);
+            setUser(userData);
+          } catch (e) {
+            console.error('Failed to parse localStorage user:', e);
+            router.push('/login');
+          }
         }
       } finally {
         setLoading(false);
@@ -101,17 +126,10 @@ export default function DashboardPage() {
       if (!user) return;
       
       try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
-        const response = await fetch(`${backendUrl}/api/orders`, {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-          },
-        });
+        const response = await axios.get('/orders');
         
-        if (response.ok) {
-          const data = await response.json();
-          const orders = data.orders || [];
+        if (response.data) {
+          const orders = response.data.orders || [];
           
           // Calculate stats
           const total = orders.length;

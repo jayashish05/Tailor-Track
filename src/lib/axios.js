@@ -8,6 +8,31 @@ const api = axios.create({
   },
 });
 
+// Request interceptor to add user info from localStorage if available
+api.interceptors.request.use(
+  (config) => {
+    // Add user data to headers as backup (in case cookies don't work)
+    if (typeof window !== 'undefined') {
+      const user = localStorage.getItem('user');
+      if (user) {
+        try {
+          const userData = JSON.parse(user);
+          // Add user ID to headers for backend to verify
+          if (userData.id) {
+            config.headers['X-User-ID'] = userData.id;
+          }
+        } catch (e) {
+          console.error('Failed to parse user from localStorage:', e);
+        }
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
