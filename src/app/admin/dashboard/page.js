@@ -220,6 +220,18 @@ export default function AdminDashboardPage() {
               </div>
             </Card>
           </Link>
+
+          <Link href="/admin/notifications">
+            <Card className="p-6 bg-gradient-to-br from-orange-900 to-orange-800 border-orange-700 hover:shadow-xl transition cursor-pointer group">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Send Notifications</h3>
+                  <p className="text-orange-200">Broadcast messages to all customers</p>
+                </div>
+                <ChevronRight className="w-8 h-8 text-orange-300 group-hover:translate-x-2 transition" />
+              </div>
+            </Card>
+          </Link>
         </div>
       </main>
     </div>

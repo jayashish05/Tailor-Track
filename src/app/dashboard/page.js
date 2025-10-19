@@ -14,13 +14,16 @@ import {
   Shirt,
   Clock,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  UserCircle
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -109,14 +112,6 @@ export default function DashboardPage() {
           },
         });
         
-        if (response.status === 401) {
-          // Session expired - clear localStorage and redirect
-          console.warn('⚠️ Session expired, redirecting to login');
-          localStorage.removeItem('user');
-          router.push('/login?error=session_expired');
-          return;
-        }
-        
         if (response.ok) {
           const data = await response.json();
           const orders = data.orders || [];
@@ -143,7 +138,39 @@ export default function DashboardPage() {
     };
     
     fetchOrders();
-  }, [user, router]);
+  }, [user]);
+
+  // Fetch unread notifications count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!user) return;
+      
+      try {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3005';
+        const response = await fetch(`${backendUrl}/api/notifications/unread-count`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadNotifications(data.count || 0);
+          console.log('🔔 Unread notifications:', data.count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+    
+    fetchUnreadCount();
+    
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(fetchUnreadCount, 30000);
+    
+    return () => clearInterval(interval);
+  }, [user]);
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -194,6 +221,23 @@ export default function DashboardPage() {
               </h1>
             </Link>
             <div className="flex items-center gap-4">
+              <Link href="/notifications">
+                <Button variant="outline" size="sm" className="flex items-center gap-2 relative">
+                  <Bell className="h-4 w-4" />
+                  Notifications
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadNotifications}
+                    </span>
+                  )}
+                </Button>
+              </Link>
+              <Link href="/profile">
+                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                  <UserCircle className="h-4 w-4" />
+                  Profile
+                </Button>
+              </Link>
               <span className="text-sm text-gray-600">Welcome, {user.name}!</span>
               <Button variant="outline" onClick={handleLogout}>
                 Logout

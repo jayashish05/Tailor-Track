@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { 
   Shield, ArrowLeft, User, Phone, Mail, MapPin, 
-  Package, DollarSign, Ruler, Calendar, FileText
+  Package, DollarSign, Ruler, Calendar, FileText, ChevronDown, ChevronUp
 } from 'lucide-react';
 import axios from '@/lib/axios';
 
@@ -19,6 +19,7 @@ export default function CustomerDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [customer, setCustomer] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [showAllOrders, setShowAllOrders] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -319,7 +320,28 @@ export default function CustomerDetailsPage() {
           {/* Orders List */}
           <div className="lg:col-span-2">
             <Card className="p-6 bg-gray-800 border-gray-700">
-              <h3 className="text-xl font-semibold text-white mb-6">Order History</h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold text-white">Order History</h3>
+                {orders.length > 3 && (
+                  <Button
+                    onClick={() => setShowAllOrders(!showAllOrders)}
+                    variant="outline"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                  >
+                    {showAllOrders ? (
+                      <>
+                        <ChevronUp className="w-4 h-4 mr-2" />
+                        Show Less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        View All ({orders.length} orders)
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
               
               {orders.length === 0 ? (
                 <div className="text-center py-12 text-gray-400">
@@ -328,7 +350,7 @@ export default function CustomerDetailsPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {orders.map((order) => {
+                  {(showAllOrders ? orders : orders.slice(0, 3)).map((order) => {
                     const statusBadge = getStatusBadge(order.status);
                     return (
                       <Card key={order._id} className="p-4 bg-gray-700/50 border-gray-600">

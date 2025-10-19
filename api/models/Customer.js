@@ -46,6 +46,35 @@ const customerSchema = new mongoose.Schema(
       // Additional measurements
       custom: mongoose.Schema.Types.Mixed,
     },
+    measurementsHistory: [
+      {
+        measurements: {
+          shirtLength: Number,
+          chest: Number,
+          shoulder: Number,
+          sleeveLength: Number,
+          neck: Number,
+          waist: Number,
+          hip: Number,
+          inseam: Number,
+          outseam: Number,
+          thigh: Number,
+          custom: mongoose.Schema.Types.Mixed,
+        },
+        updatedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        updatedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        notes: String,
+      },
+    ],
+    age: {
+      type: Number,
+    },
     notes: {
       type: String,
     },

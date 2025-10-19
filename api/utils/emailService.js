@@ -757,6 +757,139 @@ Contact: ${process.env.EMAIL_FROM || 'support@tailortrack.com'}
     `,
     };
   },
+
+  // Unread notifications reminder
+  unreadNotifications: (customerName, unreadCount) => ({
+    subject: `🔔 You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''} - TailorTrack`,
+    text: `
+Hi ${customerName},
+
+You have ${unreadCount} unread notification${unreadCount > 1 ? 's' : ''} waiting for you on TailorTrack!
+
+Don't miss important updates about your orders.
+
+View your notifications at: ${process.env.FRONTEND_URL || 'http://localhost:3002'}/notifications
+
+Best regards,
+TailorTrack Team
+    `,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 10px 10px 0 0;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 28px;
+          }
+          .content {
+            background: #f9fafb;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+          }
+          .notification-badge {
+            background: #EF4444;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+          }
+          .notification-badge .count {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+          }
+          .notification-badge .label {
+            font-size: 18px;
+            opacity: 0.9;
+          }
+          .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+            color: white !important;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+          }
+          .cta-button:hover {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(59, 130, 246, 0.4);
+          }
+          .footer {
+            background: #F3F4F6;
+            padding: 20px;
+            text-align: center;
+            color: #6B7280;
+            font-size: 14px;
+            border-radius: 0 0 10px 10px;
+          }
+          .emoji {
+            font-size: 32px;
+            margin-bottom: 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="emoji">🔔</div>
+          <h1>New Notifications!</h1>
+        </div>
+
+        <div class="content">
+          <p style="font-size: 18px; color: #374151;">Hi <strong>${customerName}</strong>,</p>
+          
+          <div class="notification-badge">
+            <div class="count">${unreadCount}</div>
+            <div class="label">Unread Notification${unreadCount > 1 ? 's' : ''}</div>
+          </div>
+
+          <p style="font-size: 16px; color: #374151; text-align: center;">
+            You have important updates waiting for you! Don't miss out on order status changes and announcements.
+          </p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3002'}/notifications" class="cta-button">
+              👆 Tap to View Notifications
+            </a>
+          </div>
+
+          <p style="color: #6B7280; font-size: 14px; text-align: center; margin-top: 20px;">
+            Stay updated with the latest information about your orders and our services.
+          </p>
+        </div>
+
+        <div class="footer">
+          <p style="margin: 5px 0;">📧 Questions? Contact us at ${process.env.EMAIL_FROM || 'support@tailortrack.com'}</p>
+          <p style="margin: 5px 0;">© ${new Date().getFullYear()} TailorTrack. All rights reserved.</p>
+        </div>
+      </body>
+      </html>
+    `,
+  }),
 };
 
 // Send email function
@@ -823,10 +956,21 @@ const notifyOrderStatusUpdate = async (order, customer, newStatus) => {
   return await sendEmail(customer.email, template);
 };
 
+const notifyUnreadNotifications = async (customerEmail, customerName, unreadCount) => {
+  if (!customerEmail) {
+    console.warn('⚠️ Customer email not found. Skipping unread notification.');
+    return { success: false, message: 'Customer email not found' };
+  }
+
+  const template = emailTemplates.unreadNotifications(customerName, unreadCount);
+  return await sendEmail(customerEmail, template);
+};
+
 module.exports = {
   sendEmail,
   notifyOrderConfirmation,
   notifyOrderReadyForPickup,
   notifyOrderStatusUpdate,
+  notifyUnreadNotifications,
   emailTemplates,
 };

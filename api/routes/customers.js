@@ -1,8 +1,40 @@
 const express = require('express');
 const Customer = require('../models/Customer');
+const Order = require('../models/Order');
 const { isAuthenticated, isStaffOrAdmin } = require('../middleware/auth');
 const { customerSchema } = require('../utils/validation');
 const router = express.Router();
+
+// Get current user's customer profile
+router.get('/me', isAuthenticated, async (req, res) => {
+  try {
+    const customer = await Customer.findOne({ userId: req.user._id })
+      .populate('userId', 'name email')
+      .populate({
+        path: 'measurementsHistory.updatedBy',
+        select: 'name email'
+      });
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer profile not found' });
+    }
+
+    // Get order statistics
+    const orders = await Order.find({ customer: customer._id });
+    const totalOrders = orders.length;
+    const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+
+    // Add statistics to customer object
+    const customerData = customer.toObject();
+    customerData.totalOrders = totalOrders;
+    customerData.totalSpent = totalSpent;
+
+    res.json({ customer: customerData });
+  } catch (error) {
+    console.error('Get customer profile error:', error);
+    res.status(500).json({ error: 'Failed to fetch customer profile' });
+  }
+});
 
 // Get all customers (staff/admin only)
 router.get('/', isAuthenticated, async (req, res) => {
@@ -30,10 +62,25 @@ router.get('/', isAuthenticated, async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
+    // Calculate order statistics for each customer
+    const customersWithStats = await Promise.all(
+      customers.map(async (customer) => {
+        const orders = await Order.find({ customer: customer._id });
+        const totalOrders = orders.length;
+        const totalSpent = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+        
+        const customerData = customer.toObject();
+        customerData.totalOrders = totalOrders;
+        customerData.totalSpent = totalSpent;
+        
+        return customerData;
+      })
+    );
+
     const count = await Customer.countDocuments(query);
 
     res.json({
-      customers,
+      customers: customersWithStats,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
       total: count,
@@ -85,6 +132,32 @@ router.post('/', isStaffOrAdmin, async (req, res) => {
   } catch (error) {
     console.error('Create customer error:', error);
     res.status(500).json({ error: 'Failed to create customer' });
+  }
+});
+
+// Update current user's customer profile
+router.put('/me', isAuthenticated, async (req, res) => {
+  try {
+    const { name, phone, age, address } = req.body;
+    
+    const customer = await Customer.findOne({ userId: req.user._id });
+    
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer profile not found' });
+    }
+
+    // Update allowed fields
+    if (name) customer.name = name;
+    if (phone) customer.phone = phone;
+    if (age) customer.age = age;
+    if (address) customer.address = { ...customer.address, ...address };
+
+    await customer.save();
+
+    res.json({ customer, message: 'Profile updated successfully' });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Failed to update profile' });
   }
 });
 
@@ -146,6 +219,45 @@ router.get('/search/phone/:phone', isStaffOrAdmin, async (req, res) => {
   } catch (error) {
     console.error('Search customer error:', error);
     res.status(500).json({ error: 'Failed to search customer' });
+  }
+});
+
+// Update customer measurements
+router.patch('/:id/measurements', isStaffOrAdmin, async (req, res) => {
+  try {
+    const { measurements, notes } = req.body;
+
+    const customer = await Customer.findById(req.params.id);
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    // Save current measurements to history
+    if (customer.measurements && Object.keys(customer.measurements).length > 0) {
+      customer.measurementsHistory.push({
+        measurements: customer.measurements,
+        updatedBy: req.user._id,
+        updatedAt: new Date(),
+        notes: notes || 'Measurements updated',
+      });
+    }
+
+    // Update current measurements
+    customer.measurements = measurements;
+    await customer.save();
+
+    const updatedCustomer = await Customer.findById(customer._id)
+      .populate('userId', 'name email')
+      .populate('measurementsHistory.updatedBy', 'name email');
+
+    res.json({ 
+      customer: updatedCustomer, 
+      message: 'Measurements updated successfully' 
+    });
+  } catch (error) {
+    console.error('Update measurements error:', error);
+    res.status(500).json({ error: 'Failed to update measurements' });
   }
 });
 

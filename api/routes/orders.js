@@ -1,6 +1,8 @@
 const express = require('express');
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
+const Notification = require('../models/Notification');
+const User = require('../models/User');
 const { isAuthenticated, isStaffOrAdmin } = require('../middleware/auth');
 const { orderSchema, orderStatusSchema } = require('../utils/validation');
 const {
@@ -192,6 +194,26 @@ router.post('/', isAuthenticated, async (req, res) => {
         .populate('customer', 'name phone email')
         .populate('createdBy', 'name email');
 
+      // Create notification for order confirmation
+      try {
+        const customerUser = await User.findOne({ email: populatedOrder.customer.email });
+        if (customerUser) {
+          await Notification.create({
+            type: 'order_confirmation',
+            title: '✅ Order Confirmed',
+            message: `Your order #${populatedOrder.orderNumber} has been confirmed and is being processed.`,
+            recipient: customerUser._id,
+            order: populatedOrder._id,
+            metadata: {
+              orderNumber: populatedOrder.orderNumber,
+              itemCount: populatedOrder.items.length,
+            },
+          });
+        }
+      } catch (notifError) {
+        console.error('⚠️ Failed to create notification:', notifError.message);
+      }
+
       // Send order confirmation email
       try {
         await notifyOrderConfirmation(populatedOrder, populatedOrder.customer);
@@ -264,6 +286,36 @@ router.patch('/:id/status', isStaffOrAdmin, async (req, res) => {
     const populatedOrder = await Order.findById(order._id)
       .populate('customer')
       .populate('statusHistory.updatedBy', 'name email');
+
+    // Create notification for status update
+    try {
+      const customerUser = await User.findOne({ email: populatedOrder.customer.email });
+      if (customerUser) {
+        const statusMessages = {
+          received: 'Your order has been received and will be processed soon.',
+          measuring: 'We are taking measurements for your garments.',
+          stitching: 'Your garments are being carefully stitched.',
+          qc: 'Your order is undergoing quality control.',
+          ready: 'Great news! Your order is ready for pickup!',
+          delivered: 'Your order has been successfully delivered.',
+        };
+
+        await Notification.create({
+          type: value.status === 'ready' ? 'ready_for_pickup' : 'status_update',
+          title: `Order #${order.orderNumber} - ${value.status.charAt(0).toUpperCase() + value.status.slice(1)}`,
+          message: statusMessages[value.status] || `Your order status has been updated to ${value.status}.`,
+          recipient: customerUser._id,
+          order: order._id,
+          metadata: {
+            orderNumber: order.orderNumber,
+            status: value.status,
+            updatedBy: req.user.name || req.user.email,
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error('⚠️ Failed to create notification:', notifError.message);
+    }
 
     // Send email notification for all status changes
     if (populatedOrder.customer) {

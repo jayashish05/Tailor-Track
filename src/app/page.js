@@ -19,7 +19,10 @@ export default function Home() {
           <h1 className="text-6xl font-bold text-gray-900 mb-4">
             Welcome to <span className="text-blue-600">TailorTrack</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-gray-500 mb-12">
+            Made By Hasini Boutique
+          </p>
+          <p className="text-xl text-gray-600 max-w-xl mx-auto mb-8">
             Your Complete Tailoring Management Solution
           </p>
           <p className="text-lg text-gray-500 mb-12">
@@ -30,12 +33,12 @@ export default function Home() {
           <div className="flex flex-col items-center gap-4">
             <div className="flex gap-6">
               <Link href="/login">
-                <Button size="lg" className="text-xl px-10 py-7 h-auto">
+                <Button size="lg" className="text-xl px-10 py-5 h-auto">
                   Get Started
                 </Button>
               </Link>
               <Link href="/register">
-                <Button size="lg" variant="outline" className="text-xl px-10 py-7 h-auto">
+                <Button size="lg" variant="outline" className="text-xl px-10 py-5 h-auto">
                   Sign Up
                 </Button>
               </Link>

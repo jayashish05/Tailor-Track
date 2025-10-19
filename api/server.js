@@ -16,6 +16,7 @@ const orderRoutes = require('./routes/orders');
 const customerRoutes = require('./routes/customers');
 const paymentRoutes = require('./routes/payments');
 const analyticsRoutes = require('./routes/analytics');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -59,16 +60,14 @@ app.use(
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
-      ttl: 7 * 24 * 60 * 60, // 7 days - longer session
+      ttl: 24 * 60 * 60, // 1 day
     }),
     cookie: {
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      domain: process.env.NODE_ENV === 'production' ? undefined : undefined, // Let browser handle it
     },
-    proxy: process.env.NODE_ENV === 'production', // Trust proxy in production (Render)
   })
 );
 
@@ -84,22 +83,11 @@ mongoose
 
 // Debug middleware to log requests
 app.use((req, res, next) => {
-  const logData = {
+  console.log(`📨 ${req.method} ${req.path}`, {
     authenticated: req.isAuthenticated(),
     user: req.user ? { id: req.user._id, email: req.user.email, role: req.user.role } : null,
     session: req.sessionID ? `${req.sessionID.substring(0, 8)}...` : 'none',
-  };
-  
-  // Extra logging for debugging session issues
-  if (!req.isAuthenticated() && req.path !== '/api/auth/status' && !req.path.includes('/api/auth/google')) {
-    console.log(`⚠️ Unauthenticated ${req.method} ${req.path}`, logData);
-    console.log('Session ID:', req.sessionID);
-    console.log('Session:', req.session);
-    console.log('Cookies:', req.headers.cookie ? 'Present' : 'Missing');
-  } else {
-    console.log(`📨 ${req.method} ${req.path}`, logData);
-  }
-  
+  });
   next();
 });
 
@@ -109,6 +97,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
