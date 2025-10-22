@@ -3,20 +3,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
-const passport = require('passport');
 const helmet = require('helmet');
 const cors = require('cors');
 
-// Import configurations
-require('./config/passport');
-
-// Import routes
-const authRoutes = require('./routes/auth');
-const orderRoutes = require('./routes/orders');
-const customerRoutes = require('./routes/customers');
-const paymentRoutes = require('./routes/payments');
-const analyticsRoutes = require('./routes/analytics');
-const notificationRoutes = require('./routes/notifications');
+// Import admin routes
+const adminAuthRoutes = require('./routes/adminAuth');
+const adminOrderRoutes = require('./routes/adminOrders');
+const trackingRoutes = require('./routes/tracking');
 
 const app = express();
 
@@ -71,10 +64,6 @@ app.use(
   })
 );
 
-// Passport middleware
-app.use(passport.initialize());
-app.use(passport.session());
-
 // Database connection
 mongoose
   .connect(process.env.MONGO_URI)
@@ -84,20 +73,16 @@ mongoose
 // Debug middleware to log requests
 app.use((req, res, next) => {
   console.log(`📨 ${req.method} ${req.path}`, {
-    authenticated: req.isAuthenticated(),
-    user: req.user ? { id: req.user._id, email: req.user.email, role: req.user.role } : null,
-    session: req.sessionID ? `${req.sessionID.substring(0, 8)}...` : 'none',
+    adminSession: req.session?.adminId ? true : false,
+    sessionID: req.sessionID ? `${req.sessionID.substring(0, 8)}...` : 'none',
   });
   next();
 });
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/notifications', notificationRoutes);
+// Admin routes
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/orders', adminOrderRoutes);
+app.use('/api/track', trackingRoutes); // Public tracking endpoint
 
 // Health check
 app.get('/health', (req, res) => {
@@ -115,12 +100,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3005;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🔐 Google Callback: ${process.env.GOOGLE_CALLBACK || 'NOT SET - WILL USE RELATIVE PATH'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'NOT SET'}`);
-  console.log(`🔗 Backend URL: ${process.env.BACKEND_URL || 'NOT SET'}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Frontend URL: http://localhost:3002`);
+  console.log(`🔗 Backend URL: http://localhost:${PORT}`);
 });

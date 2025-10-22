@@ -1,22 +1,14 @@
-import { Inter } from "next/font/google";
-import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
+import './globals.css';
 
 export const metadata = {
-  title: "TailorTrack - Tailoring Management System",
-  description: "Manage your tailoring business with ease",
+  title: 'Tailor Track - Order Management System',
+  description: 'Professional order management system for tailoring businesses',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

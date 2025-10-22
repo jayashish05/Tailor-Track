@@ -2,10 +2,27 @@ const { v4: uuidv4 } = require('uuid');
 const bwipjs = require('bwip-js');
 
 /**
- * Generate a unique barcode string
+ * Generate a unique barcode string (alphanumeric, 10 characters)
+ * Format: TT + timestamp(6) + random(2)
  */
 const generateBarcodeString = () => {
-  return uuidv4().toUpperCase().replace(/-/g, '').substring(0, 12);
+  const timestamp = Date.now().toString(36).toUpperCase().substring(0, 6);
+  const random = Math.random().toString(36).toUpperCase().substring(2, 4);
+  return `TT${timestamp}${random}`;
+};
+
+/**
+ * Generate a simple random alphanumeric code
+ * @param {number} length - Length of the code (default: 10)
+ * @returns {string} - Random alphanumeric code
+ */
+const generateRandomCode = (length = 10) => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = 'TT';
+  for (let i = 0; i < length - 2; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 };
 
 /**
@@ -86,6 +103,7 @@ const generateOrderNumber = async () => {
 
 module.exports = {
   generateBarcodeString,
+  generateRandomCode,
   generateBarcodeImage,
   generateQRCode,
   generateOrderNumber,

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "next dev",
+    "dev:frontend": "next dev -p 3002",
     "dev:backend": "nodemon api/server.js",
     "build": "next build",
     "build:backend": "echo 'Backend build complete'",
@@ -23,6 +23,7 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-toast": "^1.1.5",
+    "autoprefixer": "^10.4.17",
     "axios": "^1.6.2",
     "bcrypt": "^5.1.1",
     "bwip-js": "^4.1.1",
@@ -43,15 +44,15 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
+    "postcss": "^8.4.35",
     "razorpay": "^2.9.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.10.3",
     "tailwind-merge": "^2.1.0",
-    "uuid": "^9.0.1",
-    "autoprefixer": "^10.4.17",
-    "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.0"
+    "tailwindcss": "^3.4.0",
+    "twilio": "^5.10.3",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
