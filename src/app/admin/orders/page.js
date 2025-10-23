@@ -271,10 +271,18 @@ export default function OrdersListPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900">{order.customerName}</div>
-                          <div className="text-sm text-gray-500">{order.customerPhone}</div>
+                          <div className="text-sm text-gray-500">{order.phoneNumber}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                          {order.clothType}
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {order.items && order.items.length > 0 ? (
+                            order.items.length === 1 ? (
+                              <span className="capitalize">{order.items[0].clothType}</span>
+                            ) : (
+                              <span>{order.items.length} items</span>
+                            )
+                          ) : (
+                            <span className="capitalize">{order.clothType || 'N/A'}</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-800'}`}>

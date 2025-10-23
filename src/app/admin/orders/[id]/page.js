@@ -100,13 +100,14 @@ export default function OrderDetailsPage() {
           customerName: orderData.customerName,
           phoneNumber: orderData.phoneNumber,
           address: orderData.address || '',
-          clothType: orderData.clothType,
+          clothType: orderData.clothType || '',
           measurements: orderData.measurements || {},
           specialInstructions: orderData.specialInstructions || '',
           expectedDeliveryDate: orderData.expectedDeliveryDate ? new Date(orderData.expectedDeliveryDate).toISOString().split('T')[0] : '',
           amount: orderData.amount,
           advancePayment: orderData.advancePayment,
-          status: orderData.status
+          status: orderData.status,
+          items: orderData.items || []
         });
       }
     } catch (error) {
@@ -396,48 +397,86 @@ export default function OrderDetailsPage() {
                 <CardTitle>Order Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label>Cloth Type</Label>
-                  {editMode ? (
-                    <select
-                      name="clothType"
-                      value={formData.clothType}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {CLOTH_TYPES.map(type => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
+                {/* Show Items for multi-item orders */}
+                {order.items && order.items.length > 0 ? (
+                  <div>
+                    <Label className="text-lg">Order Items</Label>
+                    <div className="mt-2 space-y-3">
+                      {order.items.map((item, index) => (
+                        <div key={index} className="bg-gray-50 p-4 rounded-lg border">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-semibold text-gray-900 capitalize">{item.clothType}</p>
+                              {item.notes && (
+                                <p className="text-sm text-gray-600 mt-1">{item.notes}</p>
+                              )}
+                            </div>
+                            <p className="font-semibold text-gray-900">₹{item.price}</p>
+                          </div>
+                          {item.measurements && Object.keys(item.measurements).length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-200">
+                              <p className="text-xs text-gray-600 mb-1">Measurements:</p>
+                              <div className="grid grid-cols-3 gap-2">
+                                {Object.entries(item.measurements).map(([key, value]) => (
+                                  <div key={key} className="text-xs">
+                                    <span className="text-gray-600 capitalize">{key.replace(/_/g, ' ')}: </span>
+                                    <span className="font-medium">{value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </select>
-                  ) : (
-                    <p className="mt-1 text-gray-900 font-medium capitalize">{order.clothType}</p>
-                  )}
-                </div>
-
-                {/* Measurements */}
-                <div>
-                  <Label className="text-lg">Measurements</Label>
-                  <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {Object.entries(formData.measurements || {}).map(([key, value]) => (
-                      <div key={key} className="bg-gray-50 p-2 rounded">
-                        <Label className="text-xs text-gray-600 capitalize">{key.replace(/_/g, ' ')}</Label>
-                        {editMode ? (
-                          <Input
-                            type="number"
-                            step="0.5"
-                            value={value}
-                            onChange={(e) => handleMeasurementChange(key, e.target.value)}
-                            className="mt-1"
-                          />
-                        ) : (
-                          <p className="mt-1 font-medium">{value || 'N/A'}</p>
-                        )}
-                      </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* Legacy single-item display */
+                  <div>
+                    <Label>Cloth Type</Label>
+                    {editMode ? (
+                      <select
+                        name="clothType"
+                        value={formData.clothType}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        {CLOTH_TYPES.map(type => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="mt-1 text-gray-900 font-medium capitalize">{order.clothType || 'N/A'}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Measurements - only show for legacy single-item orders */}
+                {(!order.items || order.items.length === 0) && formData.measurements && Object.keys(formData.measurements).length > 0 && (
+                  <div>
+                    <Label className="text-lg">Measurements</Label>
+                    <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {Object.entries(formData.measurements || {}).map(([key, value]) => (
+                        <div key={key} className="bg-gray-50 p-2 rounded">
+                          <Label className="text-xs text-gray-600 capitalize">{key.replace(/_/g, ' ')}</Label>
+                          {editMode ? (
+                            <Input
+                              type="number"
+                              step="0.5"
+                              value={value}
+                              onChange={(e) => handleMeasurementChange(key, e.target.value)}
+                              className="mt-1"
+                            />
+                          ) : (
+                            <p className="mt-1 font-medium">{value || 'N/A'}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <Label>Special Instructions</Label>
@@ -476,10 +515,30 @@ export default function OrderDetailsPage() {
                 <CardTitle>Payment Details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Show breakdown for multi-item orders */}
+                {order.items && order.items.length > 0 && order.subtotal && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-medium">₹{order.subtotal}</span>
+                    </div>
+                    {order.discount > 0 && (
+                      <div className="flex justify-between text-red-600">
+                        <span>Discount:</span>
+                        <span>- ₹{order.discount}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t border-gray-300 font-semibold">
+                      <span>Total:</span>
+                      <span>₹{order.amount}</span>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Total Amount</Label>
-                    {editMode ? (
+                    {editMode && (!order.items || order.items.length === 0) ? (
                       <Input
                         type="number"
                         step="0.01"
@@ -512,6 +571,12 @@ export default function OrderDetailsPage() {
                     </p>
                   </div>
                 </div>
+                {order.items && order.items.length > 0 && editMode && (
+                  <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg text-sm">
+                    <p className="font-semibold">Note:</p>
+                    <p>For multi-item orders, amounts are calculated automatically from items. To modify, please contact support or create a new order.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

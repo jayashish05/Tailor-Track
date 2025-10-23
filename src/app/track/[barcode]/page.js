@@ -48,6 +48,8 @@ export default function TrackOrderPage() {
       );
       
       if (response.data.success) {
+        console.log('Order data received:', response.data.order);
+        console.log('Items in order:', response.data.order.items);
         setOrder(response.data.order);
       }
     } catch (error) {
@@ -144,6 +146,15 @@ export default function TrackOrderPage() {
 
   const progressPercentage = getProgressPercentage(order.status);
 
+  // Determine if this is a multi-item order or legacy single-item order
+  const isMultiItem = order.items && order.items.length > 0;
+  console.log('isMultiItem:', isMultiItem, 'items:', order.items);
+  const orderDescription = isMultiItem 
+    ? `Your Order (${order.items.length} item${order.items.length > 1 ? 's' : ''})`
+    : order.clothType 
+      ? `Your ${order.clothType.charAt(0).toUpperCase() + order.clothType.slice(1)} Order`
+      : 'Your Order';
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -166,7 +177,7 @@ export default function TrackOrderPage() {
                   Hello, {getFirstName(order.customerName)}! 👋
                 </CardTitle>
                 <CardDescription className="text-gray-600">
-                  Your {order.clothType.charAt(0).toUpperCase() + order.clothType.slice(1)} Order
+                  {orderDescription}
                 </CardDescription>
               </div>
               <div className="text-right">
@@ -202,12 +213,68 @@ export default function TrackOrderPage() {
               </div>
             )}
 
+            {/* Order Items - Display items if they exist */}
+            {order.items && order.items.length > 0 ? (
+              <div className="mb-6">
+                <div className="flex items-center mb-3">
+                  <span className="text-2xl mr-2">📦</span>
+                  <p className="text-lg font-bold text-gray-800">Your Order Items</p>
+                </div>
+                <div className="space-y-3">
+                  {order.items.map((item, index) => (
+                    <div key={index} className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center mb-1">
+                            <span className="text-xl mr-2">
+                              {item.clothType === 'shirt' ? '👔' : 
+                               item.clothType === 'pants' ? '👖' : 
+                               item.clothType === 'kurta' ? '🥻' : 
+                               item.clothType === 'suit' ? '🤵' : 
+                               item.clothType === 'dress' ? '👗' : 
+                               item.clothType === 'blouse' ? '👚' : '👕'}
+                            </span>
+                            <p className="font-bold text-gray-900 text-lg capitalize">
+                              {item.clothType}
+                            </p>
+                          </div>
+                          {item.notes && (
+                            <p className="text-sm text-gray-700 mt-2 bg-white p-2 rounded border border-gray-200">
+                              <span className="font-semibold">Note: </span>{item.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-4 text-right">
+                          <p className="text-sm text-gray-600">Price</p>
+                          <p className="font-bold text-gray-900 text-xl">₹{item.price}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Total Summary for multiple items */}
+                  {order.items.length > 1 && (
+                    <div className="bg-gray-900 text-white p-4 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">Total Items: {order.items.length}</span>
+                        <span className="text-xl font-bold">₹{order.items.reduce((sum, item) => sum + (item.price || 0), 0)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : order.clothType ? (
+              /* Legacy single-item display - only show if no items array */
+              <div className="mb-6">
+                <div className="bg-gray-100 p-4 rounded-lg border">
+                  <p className="text-xs text-gray-600 mb-1">Cloth Type</p>
+                  <p className="font-semibold text-gray-900 capitalize text-lg">{order.clothType}</p>
+                </div>
+              </div>
+            ) : null}
+
             {/* Order Information Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-100 p-4 rounded-lg border">
-                <p className="text-xs text-gray-600 mb-1">Cloth Type</p>
-                <p className="font-semibold text-gray-900 capitalize">{order.clothType}</p>
-              </div>
               <div className="bg-gray-100 p-4 rounded-lg border">
                 <p className="text-xs text-gray-600 mb-1">Expected Delivery</p>
                 <p className="font-semibold text-gray-900">

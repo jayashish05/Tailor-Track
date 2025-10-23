@@ -57,8 +57,8 @@ router.post('/', isAuthenticated, async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate unique barcode' });
     }
 
-    // Generate tracking link
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.FRONTEND_URL || 'http://localhost:3002';
+    // Generate tracking link (use frontend URL, not API URL)
+    const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
     const trackingLink = `${baseUrl}/track/${barcode}`;
 
     // Prepare order data
@@ -75,11 +75,13 @@ router.post('/', isAuthenticated, async (req, res) => {
 
     // Handle multi-item orders
     if (items && items.length > 0) {
+      console.log('Creating multi-item order with items:', items);
       orderData.items = items;
       orderData.discount = discount || 0;
       // subtotal and amount will be calculated by the pre-save middleware
       orderData.advancePayment = advancePayment || 0;
     } else {
+      console.log('Creating legacy single-item order with clothType:', clothType);
       // Backward compatibility for single-item orders
       orderData.clothType = clothType;
       orderData.measurements = measurements || {};
@@ -90,9 +92,13 @@ router.post('/', isAuthenticated, async (req, res) => {
     // Create order
     const order = new Order(orderData);
 
+    console.log('Order data before save:', JSON.stringify(orderData, null, 2));
+
     await order.save();
 
     console.log(`✅ Order created: ${barcode} for ${customerName}`);
+    console.log('Saved order items:', order.items);
+    console.log('Saved order clothType:', order.clothType);
 
     // Send SMS
     try {

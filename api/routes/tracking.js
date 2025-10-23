@@ -28,8 +28,9 @@ router.get('/:barcode', async (req, res) => {
     // Return customer-safe information
     const orderInfo = {
       barcode: order.barcode,
-      customerName: order.customerName, // Frontend will show first name only
+      customerName: order.customerName,
       clothType: order.clothType,
+      items: order.items || [],
       status: order.status,
       expectedDeliveryDate: order.expectedDeliveryDate,
       amount: order.amount,
