@@ -48,18 +48,26 @@ router.post('/login', async (req, res) => {
     req.session.adminName = admin.name;
     req.session.adminRole = admin.role;
 
-    console.log(`✅ Admin logged in: ${admin.username}`);
+    // Explicitly save session to ensure it's stored
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).json({ error: 'Failed to create session' });
+      }
 
-    res.json({
-      success: true,
-      message: 'Login successful',
-      admin: {
-        id: admin._id,
-        username: admin.username,
-        email: admin.email,
-        name: admin.name,
-        role: admin.role,
-      },
+      console.log(`✅ Admin logged in: ${admin.username}`);
+
+      res.json({
+        success: true,
+        message: 'Login successful',
+        admin: {
+          id: admin._id,
+          username: admin.username,
+          email: admin.email,
+          name: admin.name,
+          role: admin.role,
+        },
+      });
     });
   } catch (error) {
     console.error('Login error:', error);
