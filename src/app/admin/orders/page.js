@@ -90,7 +90,7 @@ export default function OrdersListPage() {
       filtered = filtered.filter(order =>
         order.barcode.toLowerCase().includes(query) ||
         order.customerName.toLowerCase().includes(query) ||
-        order.customerPhone.includes(query)
+        order.phoneNumber?.includes(query)
       );
     }
 

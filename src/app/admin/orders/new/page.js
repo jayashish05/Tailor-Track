@@ -35,29 +35,26 @@ export default function NewOrderPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  const [formData, setFormData] = useState({
-    customerName: '',
-    customerPhone: '',
-    customerAddress: '',
+  // Customer details
+  const [customerName, setCustomerName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [address, setAddress] = useState('');
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState('');
+  
+  // Order items
+  const [items, setItems] = useState([{
+    id: 1,
     clothType: 'shirt',
     measurements: {},
-    amount: '',
-    advanceAmount: '',
-    deliveryDate: '',
+    price: '',
     notes: ''
-  });
+  }]);
 
-  // Update measurements when cloth type changes
-  useEffect(() => {
-    const fields = MEASUREMENT_FIELDS[formData.clothType] || [];
-    const newMeasurements = {};
-    fields.forEach(field => {
-      newMeasurements[field] = formData.measurements[field] || '';
-    });
-    setFormData(prev => ({ ...prev, measurements: newMeasurements }));
-  }, [formData.clothType]);
+  // Pricing
+  const [discount, setDiscount] = useState('');
+  const [advancePayment, setAdvancePayment] = useState('');
 
-  // Check authentication
   useEffect(() => {
     checkAuth();
   }, []);
@@ -76,62 +73,113 @@ export default function NewOrderPage() {
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  // Add new item
+  const handleAddItem = () => {
+    setItems([...items, {
+      id: Date.now(),
+      clothType: 'shirt',
+      measurements: {},
+      price: '',
+      notes: ''
+    }]);
   };
 
-  const handleMeasurementChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      measurements: {
-        ...prev.measurements,
-        [field]: value
+  // Remove item
+  const handleRemoveItem = (itemId) => {
+    if (items.length === 1) {
+      alert('At least one item is required');
+      return;
+    }
+    setItems(items.filter(item => item.id !== itemId));
+  };
+
+  // Update item field
+  const updateItem = (itemId, field, value) => {
+    setItems(items.map(item => 
+      item.id === itemId ? { ...item, [field]: value } : item
+    ));
+  };
+
+  // Update item measurement
+  const updateItemMeasurement = (itemId, key, value) => {
+    setItems(items.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          measurements: { ...item.measurements, [key]: value }
+        };
       }
+      return item;
     }));
   };
 
-  const calculateBalance = () => {
-    const amount = parseFloat(formData.amount) || 0;
-    const advance = parseFloat(formData.advanceAmount) || 0;
-    return amount - advance;
+  // Copy measurements from another item
+  const handleCopyMeasurements = (targetItemId, sourceItemId) => {
+    const sourceItem = items.find(item => item.id === parseInt(sourceItemId));
+    if (sourceItem) {
+      setItems(items.map(item => 
+        item.id === targetItemId 
+          ? { ...item, measurements: { ...sourceItem.measurements } }
+          : item
+      ));
+    }
   };
 
+  // Calculate totals
+  const calculateSubtotal = () => {
+    return items.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+  };
+
+  const calculateTotal = () => {
+    return Math.max(0, calculateSubtotal() - (parseFloat(discount) || 0));
+  };
+
+  const calculateBalance = () => {
+    return Math.max(0, calculateTotal() - (parseFloat(advancePayment) || 0));
+  };
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setLoading(true);
+
+    // Validation
+    if (!customerName.trim()) {
+      setError('Customer name is required');
+      return;
+    }
+
+    if (!phoneNumber.trim()) {
+      setError('Phone number is required');
+      return;
+    }
+
+    // Validate items
+    for (let item of items) {
+      if (!item.price || parseFloat(item.price) < 0) {
+        setError(`Please enter a valid price for ${item.clothType}`);
+        return;
+      }
+    }
 
     try {
-      // Validate phone number
-      if (!/^\d{10}$/.test(formData.customerPhone)) {
-        throw new Error('Phone number must be 10 digits');
-      }
+      setLoading(true);
 
-      // Validate amounts
-      const amount = parseFloat(formData.amount);
-      const advance = parseFloat(formData.advanceAmount) || 0;
-      
-      if (amount <= 0) {
-        throw new Error('Amount must be greater than 0');
-      }
-      
-      if (advance > amount) {
-        throw new Error('Advance amount cannot be greater than total amount');
-      }
-
-      // Prepare order data
       const orderData = {
-        customerName: formData.customerName.trim(),
-        phoneNumber: formData.customerPhone.trim(),
-        address: formData.customerAddress.trim(),
-        clothType: formData.clothType,
-        measurements: formData.measurements,
-        specialInstructions: formData.notes.trim() || undefined,
-        expectedDeliveryDate: formData.deliveryDate || undefined,
-        amount: amount,
-        advancePayment: advance
+        customerName: customerName.trim(),
+        phoneNumber: phoneNumber.trim(),
+        address: address.trim(),
+        items: items.map(item => ({
+          clothType: item.clothType,
+          measurements: item.measurements,
+          price: parseFloat(item.price) || 0,
+          notes: item.notes.trim()
+        })),
+        specialInstructions: specialInstructions.trim(),
+        expectedDeliveryDate: expectedDeliveryDate || undefined,
+        discount: parseFloat(discount) || 0,
+        advancePayment: parseFloat(advancePayment) || 0
       };
 
       const response = await axios.post(
@@ -142,53 +190,34 @@ export default function NewOrderPage() {
 
       if (response.data.success) {
         setSuccess(`Order created successfully! Barcode: ${response.data.order.barcode}`);
-        
-        // Reset form
         setTimeout(() => {
           router.push('/admin/orders');
         }, 2000);
       }
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to create order');
+    } catch (error) {
+      console.error('Order creation error:', error);
+      setError(error.response?.data?.error || 'Failed to create order');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatFieldName = (field) => {
-    return field.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => router.push('/admin/dashboard')}
-                variant="outline"
-                className="flex items-center"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back to Dashboard
+              <Button onClick={() => router.push('/admin/orders')} variant="outline">
+                ← Back
               </Button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Create New Order</h1>
-                <p className="text-sm text-gray-600">Fill in customer and order details</p>
-              </div>
+              <h1 className="text-2xl font-bold text-gray-900">Create New Order</h1>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
           <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error}
@@ -212,39 +241,94 @@ export default function NewOrderPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="customerName">Customer Name *</Label>
-                  <Input
-                    id="customerName"
-                    name="customerName"
-                    value={formData.customerName}
-                    onChange={handleChange}
-                    required
-                    placeholder="Enter customer name"
-                  />
+                  <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
                 </div>
                 <div>
-                  <Label htmlFor="customerPhone">Phone Number *</Label>
-                  <Input
-                    id="customerPhone"
-                    name="customerPhone"
-                    value={formData.customerPhone}
-                    onChange={handleChange}
-                    required
-                    placeholder="10 digit number"
-                    pattern="\d{10}"
-                    maxLength={10}
-                  />
+                  <Label htmlFor="phoneNumber">Phone Number *</Label>
+                  <Input id="phoneNumber" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="+91" required />
                 </div>
               </div>
               <div>
-                <Label htmlFor="customerAddress">Address</Label>
-                <Input
-                  id="customerAddress"
-                  name="customerAddress"
-                  value={formData.customerAddress}
-                  onChange={handleChange}
-                  placeholder="Customer address (optional)"
-                />
+                <Label htmlFor="address">Address</Label>
+                <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Order Items */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Order Items</CardTitle>
+                  <CardDescription>Add clothes and measurements</CardDescription>
+                </div>
+                <Button type="button" onClick={handleAddItem} className="bg-indigo-600 hover:bg-indigo-700">
+                  + Add Item
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {items.map((item, index) => (
+                <div key={item.id} className="border rounded-lg p-4 bg-gray-50">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-semibold text-lg">Item #{index + 1}</h3>
+                    {items.length > 1 && (
+                      <Button type="button" onClick={() => handleRemoveItem(item.id)} variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" size="sm">
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Cloth Type *</Label>
+                        <select value={item.clothType} onChange={(e) => updateItem(item.id, 'clothType', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                          {CLOTH_TYPES.map(type => (
+                            <option key={type.value} value={type.value}>{type.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Price (₹) *</Label>
+                        <Input type="number" step="0.01" value={item.price} onChange={(e) => updateItem(item.id, 'price', e.target.value)} required />
+                      </div>
+                    </div>
+
+                    {index > 0 && (
+                      <div>
+                        <Label>Use Same Measurements As:</Label>
+                        <select onChange={(e) => e.target.value && handleCopyMeasurements(item.id, e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                          <option value="">-- Select to copy measurements --</option>
+                          {items.slice(0, index).map((prevItem, prevIndex) => (
+                            <option key={prevItem.id} value={prevItem.id}>
+                              Item #{prevIndex + 1} ({prevItem.clothType})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label className="mb-2">Measurements (inches)</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {MEASUREMENT_FIELDS[item.clothType].map((field) => (
+                          <div key={field}>
+                            <Label className="text-xs capitalize">{field.replace(/_/g, ' ')}</Label>
+                            <Input type="number" step="0.5" value={item.measurements[field] || ''} onChange={(e) => updateItemMeasurement(item.id, field, e.target.value)} placeholder="0.0" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Item Notes</Label>
+                      <textarea value={item.notes} onChange={(e) => updateItem(item.id, 'notes', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Specific instructions for this item..." />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
 
@@ -252,142 +336,57 @@ export default function NewOrderPage() {
           <Card>
             <CardHeader>
               <CardTitle>Order Details</CardTitle>
-              <CardDescription>Select cloth type and enter measurements</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="clothType">Cloth Type *</Label>
-                <select
-                  id="clothType"
-                  name="clothType"
-                  value={formData.clothType}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
-                >
-                  {CLOTH_TYPES.map(type => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                <Label htmlFor="specialInstructions">Special Instructions (Order-level)</Label>
+                <textarea id="specialInstructions" value={specialInstructions} onChange={(e) => setSpecialInstructions(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="General instructions for entire order..." />
               </div>
-
-              {/* Measurements */}
               <div>
-                <h3 className="font-medium text-gray-900 mb-3">Measurements (in inches)</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {MEASUREMENT_FIELDS[formData.clothType]?.map(field => (
-                    <div key={field}>
-                      <Label htmlFor={field}>{formatFieldName(field)}</Label>
-                      <Input
-                        id={field}
-                        type="number"
-                        step="0.5"
-                        value={formData.measurements[field] || ''}
-                        onChange={(e) => handleMeasurementChange(field, e.target.value)}
-                        placeholder="0.0"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes / Special Instructions</Label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Any special instructions or notes"
-                />
+                <Label htmlFor="expectedDeliveryDate">Expected Delivery Date</Label>
+                <Input id="expectedDeliveryDate" type="date" value={expectedDeliveryDate} onChange={(e) => setExpectedDeliveryDate(e.target.value)} />
               </div>
             </CardContent>
           </Card>
 
-          {/* Payment Details */}
+          {/* Pricing Summary */}
           <Card>
             <CardHeader>
               <CardTitle>Payment Details</CardTitle>
-              <CardDescription>Enter amount and delivery information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="amount">Total Amount (₹) *</Label>
-                  <Input
-                    id="amount"
-                    name="amount"
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={handleChange}
-                    required
-                    placeholder="0.00"
-                  />
+              <div className="bg-gray-100 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between text-lg">
+                  <span>Subtotal:</span>
+                  <span className="font-semibold">₹{calculateSubtotal().toFixed(2)}</span>
                 </div>
-                <div>
-                  <Label htmlFor="advanceAmount">Advance Amount (₹)</Label>
-                  <Input
-                    id="advanceAmount"
-                    name="advanceAmount"
-                    type="number"
-                    step="0.01"
-                    value={formData.advanceAmount}
-                    onChange={handleChange}
-                    placeholder="0.00"
-                  />
+                <div className="flex justify-between items-center">
+                  <Label>Discount (₹):</Label>
+                  <Input type="number" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} className="w-32" placeholder="0.00" />
                 </div>
-                <div>
-                  <Label>Balance Amount (₹)</Label>
-                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 font-medium">
-                    ₹{calculateBalance().toFixed(2)}
-                  </div>
+                <div className="flex justify-between text-xl font-bold border-t pt-2">
+                  <span>Total Amount:</span>
+                  <span className="text-indigo-600">₹{calculateTotal().toFixed(2)}</span>
                 </div>
-              </div>
-              <div>
-                <Label htmlFor="deliveryDate">Expected Delivery Date</Label>
-                <Input
-                  id="deliveryDate"
-                  name="deliveryDate"
-                  type="date"
-                  value={formData.deliveryDate}
-                  onChange={handleChange}
-                  min={new Date().toISOString().split('T')[0]}
-                />
+                <div className="flex justify-between items-center">
+                  <Label>Advance Payment (₹):</Label>
+                  <Input type="number" step="0.01" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} className="w-32" placeholder="0.00" />
+                </div>
+                <div className="flex justify-between text-lg text-orange-600 font-semibold">
+                  <span>Balance Due:</span>
+                  <span>₹{calculateBalance().toFixed(2)}</span>
+                </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Submit Button */}
           <div className="flex justify-end space-x-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.push('/admin/dashboard')}
-              disabled={loading}
-            >
+            <Button type="button" onClick={() => router.push('/admin/orders')} variant="outline" disabled={loading}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-8"
-            >
-              {loading ? (
-                <span className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Creating Order...
-                </span>
-              ) : (
-                'Create Order'
-              )}
+            <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-8">
+              {loading ? 'Creating Order...' : 'Create Order'}
             </Button>
           </div>
         </form>

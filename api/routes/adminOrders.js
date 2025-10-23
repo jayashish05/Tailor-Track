@@ -14,17 +14,28 @@ router.post('/', isAuthenticated, async (req, res) => {
       address,
       clothType,
       measurements,
+      items,
       specialInstructions,
       expectedDeliveryDate,
       amount,
       advancePayment,
+      discount,
     } = req.body;
 
     // Validation
-    if (!customerName || !phoneNumber || !clothType) {
+    if (!customerName || !phoneNumber) {
       return res.status(400).json({ 
-        error: 'Customer name, phone number, and cloth type are required' 
+        error: 'Customer name and phone number are required' 
       });
+    }
+
+    // Support both old (single-item) and new (multi-item) formats
+    if (!items || items.length === 0) {
+      if (!clothType) {
+        return res.status(400).json({ 
+          error: 'Cloth type or items array is required' 
+        });
+      }
     }
 
     // Generate unique barcode
@@ -47,24 +58,37 @@ router.post('/', isAuthenticated, async (req, res) => {
     }
 
     // Generate tracking link
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3002';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.FRONTEND_URL || 'http://localhost:3002';
     const trackingLink = `${baseUrl}/track/${barcode}`;
 
-    // Create order
-    const order = new Order({
+    // Prepare order data
+    const orderData = {
       barcode,
       customerName,
       phoneNumber,
       address,
-      clothType,
-      measurements: measurements || {},
       specialInstructions,
       expectedDeliveryDate,
-      amount: amount || 0,
-      advancePayment: advancePayment || 0,
       trackingLink,
       createdBy: req.session.adminName || req.session.adminId,
-    });
+    };
+
+    // Handle multi-item orders
+    if (items && items.length > 0) {
+      orderData.items = items;
+      orderData.discount = discount || 0;
+      // subtotal and amount will be calculated by the pre-save middleware
+      orderData.advancePayment = advancePayment || 0;
+    } else {
+      // Backward compatibility for single-item orders
+      orderData.clothType = clothType;
+      orderData.measurements = measurements || {};
+      orderData.amount = amount || 0;
+      orderData.advancePayment = advancePayment || 0;
+    }
+
+    // Create order
+    const order = new Order(orderData);
 
     await order.save();
 

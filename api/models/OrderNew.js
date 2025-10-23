@@ -23,24 +23,66 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    // Order Details
+    // Order Items - Array of items (clothes)
+    items: [{
+      clothType: {
+        type: String,
+        required: true,
+        enum: ['shirt', 'pants', 'suit', 'dress', 'kurta', 'blouse', 'other'],
+        lowercase: true,
+      },
+      measurements: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {},
+      },
+      price: {
+        type: Number,
+        default: 0,
+      },
+      notes: {
+        type: String,
+        trim: true,
+      },
+    }],
+    // Legacy fields for backward compatibility (deprecated)
     clothType: {
       type: String,
-      required: true,
       enum: ['shirt', 'pants', 'suit', 'dress', 'kurta', 'blouse', 'other'],
       lowercase: true,
     },
-    // Measurements - flexible object to store any measurements
+    // Measurements - flexible object to store any measurements (deprecated)
     measurements: {
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    // Order-level details
     specialInstructions: {
       type: String,
       trim: true,
     },
     expectedDeliveryDate: {
       type: Date,
+    },
+    // Pricing
+    subtotal: {
+      type: Number,
+      default: 0,
+    },
+    discount: {
+      type: Number,
+      default: 0,
+    },
+    amount: {
+      type: Number,
+      default: 0,
+    },
+    advancePayment: {
+      type: Number,
+      default: 0,
+    },
+    balanceAmount: {
+      type: Number,
+      default: 0,
     },
     // Order Status
     status: {
@@ -69,19 +111,6 @@ const orderSchema = new mongoose.Schema(
         updatedBy: String,
       },
     ],
-    // Pricing
-    amount: {
-      type: Number,
-      default: 0,
-    },
-    advancePayment: {
-      type: Number,
-      default: 0,
-    },
-    balanceAmount: {
-      type: Number,
-      default: 0,
-    },
     // Tracking
     trackingLink: {
       type: String,
@@ -104,11 +133,19 @@ const orderSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save middleware to update balance amount
+// Pre-save middleware to calculate subtotal and amount from items
 orderSchema.pre('save', function (next) {
+  // Calculate subtotal from items if items exist
+  if (this.items && this.items.length > 0) {
+    this.subtotal = this.items.reduce((total, item) => total + (item.price || 0), 0);
+    this.amount = this.subtotal - (this.discount || 0);
+  }
+  
+  // Update balance amount
   if (this.amount && this.advancePayment) {
     this.balanceAmount = this.amount - this.advancePayment;
   }
+  
   next();
 });
 

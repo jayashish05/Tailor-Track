@@ -12,7 +12,11 @@
     "start:frontend": "next start",
     "start:backend": "node api/server.js",
     "lint": "eslint",
-    "postinstall": "echo 'Installation complete'"
+    "postinstall": "echo 'Installation complete'",
+    "admin:create": "node scripts/createAdmin.js",
+    "admin:list": "node scripts/listAdmins.js",
+    "admin:delete": "node scripts/deleteAdmin.js",
+    "admin:first": "node scripts/createFirstAdmin.js"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
