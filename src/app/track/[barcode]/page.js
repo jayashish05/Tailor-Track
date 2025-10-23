@@ -112,9 +112,9 @@ export default function TrackOrderPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-gray-900 mx-auto"></div>
           <p className="mt-4 text-gray-600 text-lg">Loading your order...</p>
         </div>
       </div>
@@ -123,15 +123,15 @@ export default function TrackOrderPage() {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
-        <Card className="max-w-md w-full shadow-xl">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="max-w-md w-full shadow-lg border">
           <CardContent className="text-center py-12">
             <div className="text-6xl mb-4">😕</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Not Found</h2>
             <p className="text-gray-600 mb-6">{error || 'Unable to find this order'}</p>
-            <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="bg-gray-100 p-4 rounded-lg border">
               <p className="text-sm text-gray-700 mb-2">Searched for barcode:</p>
-              <p className="font-mono font-bold text-indigo-600 text-lg">{barcode}</p>
+              <p className="font-mono font-bold text-gray-900 text-lg">{barcode}</p>
             </div>
             <p className="text-xs text-gray-500 mt-6">
               If you believe this is an error, please contact us with your order details.
@@ -145,12 +145,12 @@ export default function TrackOrderPage() {
   const progressPercentage = getProgressPercentage(order.status);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-block bg-white px-6 py-3 rounded-full shadow-lg mb-4">
-            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+          <div className="inline-block bg-white px-6 py-3 rounded-lg shadow-sm border mb-4">
+            <h1 className="text-3xl font-bold text-gray-900">
               Tailor Track
             </h1>
           </div>
@@ -158,20 +158,20 @@ export default function TrackOrderPage() {
         </div>
 
         {/* Main Order Card */}
-        <Card className="shadow-2xl border-2 border-indigo-100 mb-6">
-          <CardHeader className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+        <Card className="shadow-lg border mb-6">
+          <CardHeader className="bg-white border-b">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl mb-2">
+                <CardTitle className="text-2xl mb-2 text-gray-900">
                   Hello, {getFirstName(order.customerName)}! 👋
                 </CardTitle>
-                <CardDescription className="text-indigo-100">
+                <CardDescription className="text-gray-600">
                   Your {order.clothType.charAt(0).toUpperCase() + order.clothType.slice(1)} Order
                 </CardDescription>
               </div>
               <div className="text-right">
-                <p className="text-xs text-indigo-200 mb-1">Order Barcode</p>
-                <p className="font-mono font-bold text-xl">{order.barcode}</p>
+                <p className="text-xs text-gray-500 mb-1">Order Barcode</p>
+                <p className="font-mono font-bold text-xl text-gray-900">{order.barcode}</p>
               </div>
             </div>
           </CardHeader>
@@ -180,7 +180,7 @@ export default function TrackOrderPage() {
             {/* Current Status Badge */}
             <div className="text-center mb-8">
               <p className="text-sm text-gray-600 mb-3">Current Status</p>
-              <div className={`inline-flex items-center px-6 py-3 text-lg font-bold rounded-full border-2 ${STATUS_COLORS[order.status]}`}>
+              <div className={`inline-flex items-center px-6 py-3 text-lg font-bold rounded-lg border-2 ${STATUS_COLORS[order.status]}`}>
                 <span className="text-2xl mr-2">{STATUS_ICONS[order.status]}</span>
                 {formatStatus(order.status)}
               </div>
@@ -195,7 +195,7 @@ export default function TrackOrderPage() {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                    className="h-full bg-gray-900 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${progressPercentage}%` }}
                   ></div>
                 </div>
@@ -204,11 +204,11 @@ export default function TrackOrderPage() {
 
             {/* Order Information Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+              <div className="bg-gray-100 p-4 rounded-lg border">
                 <p className="text-xs text-gray-600 mb-1">Cloth Type</p>
                 <p className="font-semibold text-gray-900 capitalize">{order.clothType}</p>
               </div>
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+              <div className="bg-gray-100 p-4 rounded-lg border">
                 <p className="text-xs text-gray-600 mb-1">Expected Delivery</p>
                 <p className="font-semibold text-gray-900">
                   {order.expectedDeliveryDate ? formatDate(order.expectedDeliveryDate) : 'To be confirmed'}
@@ -218,11 +218,11 @@ export default function TrackOrderPage() {
 
             {/* Balance Payment Info */}
             {order.balanceAmount > 0 && (
-              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-200 rounded-lg p-4 mb-6">
+              <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-700 mb-1">Balance Payment Due</p>
-                    <p className="text-2xl font-bold text-orange-600">₹{order.balanceAmount}</p>
+                    <p className="text-2xl font-bold text-orange-700">₹{order.balanceAmount}</p>
                   </div>
                   <div className="text-4xl">💰</div>
                 </div>
@@ -231,7 +231,7 @@ export default function TrackOrderPage() {
 
             {/* Special Instructions */}
             {order.specialInstructions && (
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p className="text-xs text-gray-600 mb-2 flex items-center">
                   <span className="mr-2">📝</span>
                   Special Instructions
@@ -243,8 +243,8 @@ export default function TrackOrderPage() {
         </Card>
 
         {/* Status History Timeline */}
-        <Card className="shadow-xl border-2 border-purple-100">
-          <CardHeader className="bg-gradient-to-r from-purple-100 to-indigo-100">
+        <Card className="shadow-lg border">
+          <CardHeader className="bg-white border-b">
             <CardTitle className="text-xl text-gray-900 flex items-center">
               <span className="mr-2">📋</span>
               Order History
@@ -269,7 +269,7 @@ export default function TrackOrderPage() {
                     </div>
                     {index === 0 && (
                       <div className="flex-shrink-0">
-                        <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        <span className="bg-gray-900 text-white text-xs font-bold px-3 py-1 rounded-full">
                           Current
                         </span>
                       </div>

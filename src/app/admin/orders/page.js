@@ -103,6 +103,10 @@ export default function OrdersListPage() {
   };
 
   const handleDelete = async (orderId) => {
+    if (!confirm('Are you sure you want to delete this order? This action cannot be undone.')) {
+      return;
+    }
+
     try {
       const response = await axios.delete(
         `${process.env.NEXT_PUBLIC_API_URL}/admin/orders/${orderId}`,
@@ -110,12 +114,15 @@ export default function OrdersListPage() {
       );
       
       if (response.data.success) {
+        // Remove from local state
         setOrders(orders.filter(order => order._id !== orderId));
-        setDeleteConfirm(null);
+        alert('Order deleted successfully!');
+      } else {
+        alert(response.data.error || 'Failed to delete order');
       }
     } catch (error) {
       console.error('Failed to delete order:', error);
-      alert('Failed to delete order');
+      alert(error.response?.data?.error || 'Failed to delete order. Please try again.');
     }
   };
 

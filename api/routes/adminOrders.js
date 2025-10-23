@@ -369,15 +369,24 @@ router.delete('/:id', isAuthenticated, async (req, res) => {
     const order = await Order.findByIdAndDelete(req.params.id);
 
     if (!order) {
-      return res.status(404).json({ error: 'Order not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Order not found' 
+      });
     }
 
     console.log(`✅ Order deleted: ${order.barcode}`);
 
-    res.json({ message: 'Order deleted successfully' });
+    res.json({ 
+      success: true,
+      message: 'Order deleted successfully' 
+    });
   } catch (error) {
     console.error('Delete order error:', error);
-    res.status(500).json({ error: 'Failed to delete order' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to delete order' 
+    });
   }
 });
 
