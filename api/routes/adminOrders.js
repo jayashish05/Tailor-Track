@@ -58,7 +58,11 @@ router.post('/', isAuthenticated, async (req, res) => {
     }
 
     // Generate tracking link (use frontend URL, not API URL)
-    const baseUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3002';
+    // In production, this should be your Render frontend URL
+    const baseUrl = process.env.FRONTEND_URL || 
+                    (process.env.NODE_ENV === 'production' 
+                      ? 'https://tailor-track-v1.onrender.com' 
+                      : 'http://localhost:3002');
     const trackingLink = `${baseUrl}/track/${barcode}`;
 
     // Prepare order data
