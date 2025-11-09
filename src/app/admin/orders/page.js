@@ -140,12 +140,18 @@ export default function OrdersListPage() {
   };
 
   const handleShareWhatsApp = (order) => {
+    // Generate tracking link dynamically to ensure correct URL in production
+    const baseUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : 'https://tailor-track-v1.onrender.com';
+    const trackingLink = `${baseUrl}/track/${order.barcode}`;
+    
     const message = `Hello ${order.customerName}! 👋
 
 Your order *${order.barcode}* is being processed.
 
 Track your order status here:
-${order.trackingLink}
+${trackingLink}
 
 Thank you for choosing us!
 - Tailor Track`;
