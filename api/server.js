@@ -13,6 +13,9 @@ const trackingRoutes = require('./routes/tracking');
 
 const app = express();
 
+// Trust proxy - IMPORTANT for Render
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -21,6 +24,7 @@ app.use(helmet({
 // CORS configuration
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://tailor-track-v1.onrender.com',
   'http://localhost:3002',
   'http://localhost:3000',
 ].filter(Boolean);
