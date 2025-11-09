@@ -4,13 +4,6 @@ const router = express.Router();
 
 // Middleware to check if admin is authenticated
 const isAuthenticated = (req, res, next) => {
-  console.log('🔐 Auth Check:', {
-    hasSession: !!req.session,
-    hasAdminId: !!req.session?.adminId,
-    sessionID: req.sessionID?.substring(0, 8),
-    cookies: req.headers.cookie?.substring(0, 50),
-  });
-  
   if (req.session && req.session.adminId) {
     return next();
   }
@@ -55,30 +48,18 @@ router.post('/login', async (req, res) => {
     req.session.adminName = admin.name;
     req.session.adminRole = admin.role;
 
-    // Explicitly save session to ensure it's stored
-    req.session.save((err) => {
-      if (err) {
-        console.error('Session save error:', err);
-        return res.status(500).json({ error: 'Failed to create session' });
-      }
+    console.log(`✅ Admin logged in: ${admin.username}`);
 
-      console.log(`✅ Admin logged in: ${admin.username}`, {
-        sessionID: req.sessionID?.substring(0, 8),
-        adminId: req.session.adminId,
-        cookie: req.session.cookie,
-      });
-
-      res.json({
-        success: true,
-        message: 'Login successful',
-        admin: {
-          id: admin._id,
-          username: admin.username,
-          email: admin.email,
-          name: admin.name,
-          role: admin.role,
-        },
-      });
+    res.json({
+      success: true,
+      message: 'Login successful',
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+      },
     });
   } catch (error) {
     console.error('Login error:', error);

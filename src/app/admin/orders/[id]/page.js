@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
+  { value: 'arya-work-in-progress', label: 'Arya Work In Progress' },
+  { value: 'arya-work-completed', label: 'Arya Work Completed' },
   { value: 'measurement-taken', label: 'Measurement Taken' },
   { value: 'cutting-done', label: 'Cutting Done' },
   { value: 'stitching-in-progress', label: 'Stitching in Progress' },
@@ -32,6 +34,8 @@ const CLOTH_TYPES = [
 
 const STATUS_COLORS = {
   'pending': 'bg-yellow-100 text-yellow-800',
+  'arya-work-in-progress': 'bg-blue-100 text-blue-800',
+  'arya-work-completed': 'bg-cyan-100 text-cyan-800',
   'measurement-taken': 'bg-blue-100 text-blue-800',
   'cutting-done': 'bg-purple-100 text-purple-800',
   'stitching-in-progress': 'bg-indigo-100 text-indigo-800',
@@ -206,6 +210,23 @@ export default function OrderDetailsPage() {
     }
   };
 
+  const handleShareWhatsApp = () => {
+    if (!order) return;
+
+    const message = `Hello ${order.customerName}! 👋
+
+Your order *${order.barcode}* is being processed.
+
+Track your order status here:
+${order.trackingLink}
+
+Thank you for choosing us!
+- Tailor Track`;
+
+    const whatsappUrl = `https://wa.me/${order.phoneNumber.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return 'Not set';
     return new Date(dateString).toLocaleString('en-IN', {
@@ -293,12 +314,11 @@ export default function OrderDetailsPage() {
                     Copy Link
                   </Button>
                   <Button
+                    onClick={handleShareWhatsApp}
                     variant="outline"
-                    disabled
-                    className="text-gray-400 border-gray-300 cursor-not-allowed"
-                    title="SMS feature requires Twilio account upgrade"
+                    className="text-green-600 border-green-600 hover:bg-green-50"
                   >
-                    Send SMS
+                    📱 Share on WhatsApp
                   </Button>
                 </>
               ) : (

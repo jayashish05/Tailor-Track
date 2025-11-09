@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 const STATUS_COLORS = {
   'pending': 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  'arya-work-in-progress': 'bg-blue-100 text-blue-800 border-blue-300',
+  'arya-work-completed': 'bg-cyan-100 text-cyan-800 border-cyan-300',
   'measurement-taken': 'bg-blue-100 text-blue-800 border-blue-300',
   'cutting-done': 'bg-purple-100 text-purple-800 border-purple-300',
   'stitching-in-progress': 'bg-indigo-100 text-indigo-800 border-indigo-300',
@@ -19,6 +21,8 @@ const STATUS_COLORS = {
 
 const STATUS_ICONS = {
   'pending': '⏳',
+  'arya-work-in-progress': '👨‍💼',
+  'arya-work-completed': '✔️',
   'measurement-taken': '📏',
   'cutting-done': '✂️',
   'stitching-in-progress': '🧵',
@@ -97,6 +101,8 @@ export default function TrackOrderPage() {
   const getProgressPercentage = (status) => {
     const statusOrder = [
       'pending',
+      'arya-work-in-progress',
+      'arya-work-completed',
       'measurement-taken',
       'cutting-done',
       'stitching-in-progress',

@@ -11,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 const STATUS_OPTIONS = [
   { value: '', label: 'All Status' },
   { value: 'pending', label: 'Pending' },
+  { value: 'arya-work-in-progress', label: 'Arya Work In Progress' },
+  { value: 'arya-work-completed', label: 'Arya Work Completed' },
   { value: 'measurement-taken', label: 'Measurement Taken' },
   { value: 'cutting-done', label: 'Cutting Done' },
   { value: 'stitching-in-progress', label: 'Stitching in Progress' },
@@ -23,6 +25,8 @@ const STATUS_OPTIONS = [
 
 const STATUS_COLORS = {
   'pending': 'bg-yellow-100 text-yellow-800',
+  'arya-work-in-progress': 'bg-blue-100 text-blue-800',
+  'arya-work-completed': 'bg-cyan-100 text-cyan-800',
   'measurement-taken': 'bg-blue-100 text-blue-800',
   'cutting-done': 'bg-purple-100 text-purple-800',
   'stitching-in-progress': 'bg-indigo-100 text-indigo-800',
@@ -133,6 +137,21 @@ export default function OrdersListPage() {
       console.error('Failed to copy:', err);
       alert('Failed to copy link');
     });
+  };
+
+  const handleShareWhatsApp = (order) => {
+    const message = `Hello ${order.customerName}! 👋
+
+Your order *${order.barcode}* is being processed.
+
+Track your order status here:
+${order.trackingLink}
+
+Thank you for choosing us!
+- Tailor Track`;
+
+    const whatsappUrl = `https://wa.me/${order.phoneNumber.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const formatDate = (dateString) => {
@@ -313,11 +332,10 @@ export default function OrdersListPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled
-                            className="text-gray-400 border-gray-300 cursor-not-allowed"
-                            title="SMS feature requires Twilio account upgrade"
+                            onClick={() => handleShareWhatsApp(order)}
+                            className="text-green-600 border-green-600 hover:bg-green-50"
                           >
-                            SMS
+                            📱 WhatsApp
                           </Button>
                           {deleteConfirm === order._id ? (
                             <div className="inline-flex space-x-1">

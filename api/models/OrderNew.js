@@ -89,6 +89,8 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: [
         'pending',
+        'arya-work-in-progress',
+        'arya-work-completed',
         'measurement-taken',
         'cutting-done',
         'stitching-in-progress',

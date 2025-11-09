@@ -13,9 +13,6 @@ const trackingRoutes = require('./routes/tracking');
 
 const app = express();
 
-// Trust proxy - required for secure cookies behind Render/Heroku proxy
-app.set('trust proxy', 1);
-
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -57,15 +54,13 @@ app.use(
     store: MongoStore.create({
       mongoUrl: process.env.MONGO_URI,
       ttl: 24 * 60 * 60, // 1 day
-      touchAfter: 24 * 3600, // Lazy session update
     }),
     cookie: {
       maxAge: 24 * 60 * 60 * 1000, // 1 day
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-origin
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     },
-    proxy: true, // Trust the reverse proxy for secure cookies
   })
 );
 
